@@ -20,6 +20,15 @@ export default function InstallPWA() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
+    // Logic for iOS: Show prompt if not in standalone mode (no event needed)
+    const userAgent = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (isIOS && !isInstalled) {
+      setShowInstallPrompt(true);
+    }
+
     // Verificar se já está instalado
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setShowInstallPrompt(false);

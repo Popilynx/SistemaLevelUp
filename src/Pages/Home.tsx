@@ -192,7 +192,7 @@ export default function Home() {
         </div>
 
         {/* Daily Evolution Section */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Good Habits */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}

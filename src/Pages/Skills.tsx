@@ -85,8 +85,8 @@ export default function Skills() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto">
             <Link to={createPageUrl('Home')}>
               <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                 <ArrowLeft className="w-5 h-5" />
@@ -100,7 +100,7 @@ export default function Skills() {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-400 hover:to-violet-400">
+              <Button className="w-full md:w-auto bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-400 hover:to-violet-400">
                 <Plus className="w-4 h-4 mr-2" /> Nova Habilidade
               </Button>
             </DialogTrigger>
@@ -167,7 +167,7 @@ export default function Skills() {
           return (
             <div key={category} className="mb-8">
               <h2 className="text-lg font-semibold text-slate-300 mb-4">{label}</h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <AnimatePresence>
                   {categorySkills.map((skill, index) => (
                     <motion.div
