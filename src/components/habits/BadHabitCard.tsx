@@ -50,17 +50,17 @@ export default function BadHabitCard({ habit, onFail }: BadHabitCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
           {isClean ? (
-            <span className="text-green-400 text-sm font-medium">✅ Indo bem!</span>
+            <span className="text-green-400 text-[10px] sm:text-sm font-medium whitespace-nowrap">✅ Indo bem!</span>
           ) : (
-            <span className="text-red-400 text-sm font-medium">⚠️ Cuidado</span>
+            <span className="text-red-400 text-[10px] sm:text-sm font-medium whitespace-nowrap">⚠️ Cuidado</span>
           )}
           <Button
             onClick={() => onFail(habit)}
             size="sm"
             variant="ghost"
-            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20"
+            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 whitespace-nowrap h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
           >
             Eu fiz 😞
           </Button>
