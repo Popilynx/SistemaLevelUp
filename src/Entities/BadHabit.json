@@ -1,0 +1,54 @@
+{
+  "name": "BadHabit",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do mau h\u00e1bito"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji ou \u00edcone"
+    },
+    "health_penalty": {
+      "type": "number",
+      "default": 50,
+      "description": "Vida perdida ao cair"
+    },
+    "exp_penalty": {
+      "type": "number",
+      "default": 20,
+      "description": "EXP perdido ao cair"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "red",
+        "blue",
+        "gray",
+        "purple",
+        "orange"
+      ],
+      "default": "red",
+      "description": "Cor do indicador"
+    },
+    "days_clean": {
+      "type": "number",
+      "default": 0,
+      "description": "Dias sem cair no h\u00e1bito"
+    },
+    "total_falls": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de vezes que caiu"
+    },
+    "monthly_falls": {
+      "type": "number",
+      "default": 0,
+      "description": "Quedas no m\u00eas atual"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

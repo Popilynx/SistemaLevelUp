@@ -1,0 +1,62 @@
+{
+  "name": "Objective",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo do objetivo"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do objetivo"
+    },
+    "progress": {
+      "type": "number",
+      "default": 0,
+      "description": "Progresso atual (0-100)"
+    },
+    "target_value": {
+      "type": "number",
+      "default": 100,
+      "description": "Valor alvo"
+    },
+    "current_value": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor atual"
+    },
+    "is_main": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se \u00e9 objetivo principal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "em_andamento",
+        "concluido",
+        "pausado"
+      ],
+      "default": "em_andamento",
+      "description": "Status do objetivo"
+    },
+    "exp_reward": {
+      "type": "number",
+      "default": 500,
+      "description": "EXP ao concluir"
+    },
+    "gold_reward": {
+      "type": "number",
+      "default": 100,
+      "description": "Moedas ao concluir"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data limite"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

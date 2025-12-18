@@ -1,0 +1,33 @@
+{
+  "name": "DailyCheck",
+  "type": "object",
+  "properties": {
+    "habit_id": {
+      "type": "string",
+      "description": "ID do h\u00e1bito"
+    },
+    "habit_type": {
+      "type": "string",
+      "enum": [
+        "good",
+        "bad"
+      ],
+      "description": "Tipo de h\u00e1bito"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do check"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se foi completado (bom) ou se falhou (mau)"
+    }
+  },
+  "required": [
+    "habit_id",
+    "habit_type",
+    "date"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "MarketItem",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do item/recompensa"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do item"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji ou \u00edcone"
+    },
+    "price": {
+      "type": "number",
+      "default": 50,
+      "description": "Pre\u00e7o em moedas"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "recompensa",
+        "boost",
+        "cosmetic",
+        "especial"
+      ],
+      "default": "recompensa",
+      "description": "Categoria do item"
+    },
+    "is_available": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se est\u00e1 dispon\u00edvel"
+    },
+    "times_purchased": {
+      "type": "number",
+      "default": 0,
+      "description": "Vezes comprado"
+    }
+  },
+  "required": [
+    "name",
+    "price"
+  ]
+}

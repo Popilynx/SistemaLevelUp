@@ -1,0 +1,54 @@
+{
+  "name": "GoodHabit",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do h\u00e1bito"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji ou \u00edcone do h\u00e1bito"
+    },
+    "exp_reward": {
+      "type": "number",
+      "default": 10,
+      "description": "EXP ganho ao completar"
+    },
+    "gold_reward": {
+      "type": "number",
+      "default": 5,
+      "description": "Moedas ganhas ao completar"
+    },
+    "skill_category": {
+      "type": "string",
+      "enum": [
+        "estudo",
+        "leitura",
+        "saude",
+        "lazer",
+        "musculacao",
+        "financas"
+      ],
+      "description": "Categoria de habilidade relacionada"
+    },
+    "is_daily": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se \u00e9 um h\u00e1bito di\u00e1rio"
+    },
+    "streak": {
+      "type": "number",
+      "default": 0,
+      "description": "Sequ\u00eancia atual de dias"
+    },
+    "best_streak": {
+      "type": "number",
+      "default": 0,
+      "description": "Melhor sequ\u00eancia"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

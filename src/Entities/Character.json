@@ -1,0 +1,64 @@
+{
+  "name": "Character",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do personagem"
+    },
+    "profile_image": {
+      "type": "string",
+      "description": "URL da foto de perfil"
+    },
+    "main_objective": {
+      "type": "string",
+      "description": "Objetivo principal de vida"
+    },
+    "strengths": {
+      "type": "string",
+      "description": "Pontos fortes"
+    },
+    "weaknesses": {
+      "type": "string",
+      "description": "Fraquezas"
+    },
+    "current_exp": {
+      "type": "number",
+      "default": 0,
+      "description": "EXP atual"
+    },
+    "total_exp": {
+      "type": "number",
+      "default": 0,
+      "description": "EXP total acumulado"
+    },
+    "level": {
+      "type": "number",
+      "default": 1,
+      "description": "N\u00edvel atual"
+    },
+    "health": {
+      "type": "number",
+      "default": 1000,
+      "description": "Vida atual"
+    },
+    "max_health": {
+      "type": "number",
+      "default": 1000,
+      "description": "Vida m\u00e1xima"
+    },
+    "gold": {
+      "type": "number",
+      "default": 0,
+      "description": "Moedas para o mercado"
+    },
+    "hit_points": {
+      "type": "number",
+      "default": 100,
+      "description": "Pontos de acerto"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
