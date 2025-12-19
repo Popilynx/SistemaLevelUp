@@ -20,11 +20,12 @@ export const initializeDefaultData = () => {
     const defaultData = {
       character: {
         id: generateId(),
-        name: "Caçador",
+        name: "Renato Rocha de Souza Junior",
         profile_image: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_682b8b38ba3eb37fec6f9edb/e6cb2c7fc_ChatGPT_Image_28_de_abr_de_2025_13_33_411.png",
         main_objective: "Ser uma pessoa melhor a cada dia",
-        strengths: "Aprender rápido, foco",
-        weaknesses: "Emocional",
+        secondary_objective: "Superar todos os meus problemas",
+        strengths: "Aprender rápido e foco",
+        weaknesses: "Procrastinação",
         current_exp: 0,
         total_exp: 0,
         level: 1,
@@ -61,11 +62,13 @@ export const initializeDefaultData = () => {
         { id: generateId(), title: "Comprar um carro novo", description: "Economizar para o carro dos sonhos", is_main: false, progress: 0, status: "em_andamento", exp_reward: 500, gold_reward: 200, created_date: new Date().toISOString() },
       ],
       marketItems: [
+        { id: generateId(), name: "Poção Simples", description: "Restaura +50 HP", icon: "🧪", price: 100, category: "boost", health_gain: 50, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Poção Mediana", description: "Restaura +150 HP", icon: "⚗️", price: 200, category: "boost", health_gain: 150, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Poção Premium", description: "Restaura +500 HP", icon: "💎", price: 300, category: "boost", health_gain: 500, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Recuperar Hábito Perdido", description: "Recupera um hábito esquecido de ontem", icon: "⏳", price: 50, category: "mercado_negro", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Dia de Folga", description: "Um dia sem obrigações para relaxar", icon: "🏖️", price: 200, category: "recompensa", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Jogo Novo", description: "Comprar aquele jogo que você queria", icon: "🎮", price: 300, category: "recompensa", times_purchased: 0, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Jantar Especial", description: "Jantar em um restaurante legal", icon: "🍕", price: 150, category: "recompensa", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Boost de EXP 2x", description: "Próximo hábito vale EXP em dobro", icon: "⚡", price: 100, category: "boost", times_purchased: 0, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Recuperar Vida", description: "Restaura 100 pontos de vida", icon: "💊", price: 50, category: "boost", times_purchased: 0, created_date: new Date().toISOString() },
       ],
     };
 

@@ -62,7 +62,7 @@ export default function BadHabitCard({ habit, onFail }: BadHabitCardProps) {
             variant="ghost"
             className="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 whitespace-nowrap h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
           >
-            Eu fiz 😞
+            Droga, eu fiz...
           </Button>
         </div>
       </div>

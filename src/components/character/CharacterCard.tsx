@@ -43,7 +43,18 @@ export default function CharacterCard({ character }: CharacterCardProps) {
 
           <div className="flex-1">
             <h2 className="text-xl font-bold text-white mb-1">{character?.name || 'Caçador'}</h2>
-            <p className="text-cyan-400/80 text-sm">{character?.main_objective || 'Definir objetivo...'}</p>
+            <p className="text-cyan-400/80 text-sm font-medium">{character?.main_objective || 'Definir objetivo...'}</p>
+            {character?.secondary_objective && (
+              <p className="text-slate-400 text-xs mt-0.5 italic">“{character.secondary_objective}”</p>
+            )}
+            {character?.strengths && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 rounded-md">
+                  <span className="text-[10px] text-cyan-300 uppercase tracking-wider font-bold">Pontos Fortes:</span>
+                  <span className="text-[10px] text-slate-300 ml-1">{character.strengths}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -5,6 +5,7 @@ export interface Character {
   name: string;
   profile_image: string;
   main_objective: string;
+  secondary_objective?: string;
   strengths: string;
   weaknesses: string;
   current_exp: number;

@@ -70,6 +70,12 @@ export default function Market() {
 
     try {
       const updatedChar = { ...character, gold: character.gold - item.price };
+
+      // Handle health gain items
+      if (item.health_gain) {
+        updatedChar.health = Math.min(updatedChar.health + item.health_gain, updatedChar.max_health);
+      }
+
       await storage.updateCharacter(updatedChar);
 
       await storage.updateMarketItem(item.id, {
@@ -81,6 +87,7 @@ export default function Market() {
         activity: `Comprou: ${item.name}`,
         type: 'market_purchase',
         gold_change: -item.price,
+        health_change: item.health_gain || 0,
       });
 
       toast.success(`${item.name} comprado com sucesso!`);
@@ -101,9 +108,10 @@ export default function Market() {
 
   const categoryLabels = {
     recompensa: { label: '🎁 Recompensas', color: 'text-purple-400' },
-    boost: { label: '⚡ Boosts', color: 'text-cyan-400' },
+    boost: { label: '🧪 Poções e Boosts', color: 'text-cyan-400' },
+    mercado_negro: { label: '💀 Mercado Negro', color: 'text-red-400' },
     cosmetic: { label: '✨ Cosméticos', color: 'text-amber-400' },
-    especial: { label: '💎 Especiais', color: 'text-red-400' },
+    especial: { label: '💎 Especiais', color: 'text-orange-400' },
   };
 
   return (
@@ -201,7 +209,8 @@ export default function Market() {
                         onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                       >
                         <SelectItem value="recompensa">🎁 Recompensa</SelectItem>
-                        <SelectItem value="boost">⚡ Boost</SelectItem>
+                        <SelectItem value="boost">🧪 Boost/Poção</SelectItem>
+                        <SelectItem value="mercado_negro">💀 Mercado Negro</SelectItem>
                         <SelectItem value="cosmetic">✨ Cosmético</SelectItem>
                         <SelectItem value="especial">💎 Especial</SelectItem>
                       </Select>
