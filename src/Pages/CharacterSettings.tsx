@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Target, Zap, Heart, Shield } from 'lucide-react';
+import { ArrowLeft, Save, User, Target, Zap, Heart, Shield, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,26 @@ export default function CharacterSettings() {
       toast.error('Erro ao salvar personagem');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRequestNotifications = async () => {
+    if (!('Notification' in window)) {
+      toast.error('Notificações não são suportadas neste navegador');
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        toast.success('Notificações ativadas com sucesso!');
+        new Notification('Level Up', { body: 'Notificações ativadas!' });
+      } else {
+        toast.error('Permissão de notificação negada');
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      toast.error('Erro ao pedir permissão');
     }
   };
 
@@ -184,6 +204,29 @@ export default function CharacterSettings() {
                   className="bg-slate-800 border-slate-700 text-white"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Notifications Section */}
+          <Card className="bg-slate-900/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Bell className="w-5 h-5 text-cyan-400" />
+                Notificações (Essencial para iOS)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-400">
+                No iPhone, você precisa clicar no botão abaixo para permitir que o app envie lembretes de tarefas.
+              </p>
+              <Button
+                type="button"
+                onClick={handleRequestNotifications}
+                variant="outline"
+                className="w-full border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+              >
+                Ativar Notificações
+              </Button>
             </CardContent>
           </Card>
 

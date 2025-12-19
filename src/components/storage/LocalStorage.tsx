@@ -291,6 +291,10 @@ export const storage = {
     // Get checks for yesterday
     const checksYesterday = await storage.getDailyChecks(yesterday);
 
+    const character = await storage.getCharacter();
+    const difficulty = character?.difficulty || 1;
+    const penaltyMultiplier = 1 + ((difficulty - 1) * 0.5);
+
     const missedHabits: any[] = [];
     let totalHealthPenalty = 0;
     let totalXpPenalty = 0;
@@ -298,37 +302,37 @@ export const storage = {
     dailyHabits.forEach(habit => {
       // Check if this habit existed yesterday (created_date <= yesterday end)
       const habitCreated = new Date(habit.created_date);
-      const yesterdayDate = new Date(yesterday);
       if (habitCreated > new Date(yesterday + 'T23:59:59')) return;
 
       const completed = checksYesterday.find((c: any) => c.habit_id === habit.id && c.completed);
 
       if (!completed) {
         missedHabits.push(habit);
-        // Standard penalty: 50 Health, 20 XP (can be customized)
-        totalHealthPenalty += 50;
-        totalXpPenalty += 20;
+        // Apply difficulty multiplier
+        totalHealthPenalty += Math.floor(50 * penaltyMultiplier);
+        totalXpPenalty += Math.floor(20 * penaltyMultiplier);
 
         // Reset streak
         storage.updateGoodHabit(habit.id, { streak: 0 });
       }
     });
 
-    if (missedHabits.length > 0) {
-      const character = await storage.getCharacter();
-      if (character) {
-        await storage.updateCharacter({
-          health: Math.max((character.health || 0) - totalHealthPenalty, 0),
-          current_exp: Math.max((character.current_exp || 0) - totalXpPenalty, 0)
-        });
+    let isDead = false;
+    if (missedHabits.length > 0 && character) {
+      const newHealth = Math.max((character.health || 0) - totalHealthPenalty, 0);
+      isDead = newHealth <= 0;
 
-        await storage.addActivityLog({
-          activity: `Punição: Perdeu ${dailyHabits.length} tarefas de ontem`,
-          type: 'penalty',
-          exp_change: -totalXpPenalty,
-          health_change: -totalHealthPenalty,
-        });
-      }
+      await storage.updateCharacter({
+        health: newHealth,
+        current_exp: Math.max((character.current_exp || 0) - totalXpPenalty, 0)
+      });
+
+      await storage.addActivityLog({
+        activity: `Punição: Perdeu ${missedHabits.length} tarefas de ontem`,
+        type: 'penalty',
+        exp_change: -totalXpPenalty,
+        health_change: -totalHealthPenalty,
+      });
     }
 
     // Mark today as processed
@@ -337,7 +341,8 @@ export const storage = {
     return {
       missedHabits,
       totalHealthPenalty,
-      totalXpPenalty
+      totalXpPenalty,
+      isDead
     };
   },
 

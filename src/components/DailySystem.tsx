@@ -15,10 +15,10 @@ export default function DailySystem() {
         // 1. Initial Punishment Check
         checkPunishments();
 
-        // 2. Request Notification Permission
-        if ('Notification' in window) {
-            Notification.requestPermission();
-        }
+        // 2. Request Notification Permission (Moved to settings for iOS compatibility)
+        // if ('Notification' in window) {
+        //     Notification.requestPermission();
+        // }
 
         // 3. Timer Interval
         const interval = setInterval(() => {
@@ -34,6 +34,20 @@ export default function DailySystem() {
             if (result && result.missedHabits.length > 0) {
                 setPunishmentData(result);
                 setIsPunishmentOpen(true);
+
+                // Dispatch event to refresh UI in other components
+                window.dispatchEvent(new CustomEvent('levelup_data_update'));
+
+                if (result.isDead) {
+                    // Character death logic
+                    setTimeout(async () => {
+                        const char = await storage.getCharacter();
+                        const difficulty = char?.difficulty || 1;
+                        await storage.resetGame();
+                        alert(`☠️ DIAS DE GLÓRIA CHEGARAM AO FIM ☠️\n\nSua vida chegou a zero por falhas no treinamento.\nO mundo se tornou mais perigoso (Dificuldade ${difficulty + 1}).`);
+                        window.location.reload(); // Hard reload to reset everything
+                    }, 500);
+                }
             }
         } catch (error) {
             console.error('Failed to check punishments', error);
@@ -55,9 +69,11 @@ export default function DailySystem() {
         if (diff <= 3600 && diff > 3540 && lastNotifiedHour !== 1) { // Approx 1 hour (with 60s buffer)
             sendNotification('Atenção Caçador!', 'Falta apenas 1 hora para o fim do dia. Complete suas tarefas!');
             setLastNotifiedHour(1);
-        } else if (diff <= 1800 && diff > 1740 && lastNotifiedHour !== 0.5) { // Approx 30 mins
-            sendNotification('Crítico!', 'Apenas 30 minutos restantes. Não falhe agora!');
-            setLastNotifiedHour(0.5);
+        }
+
+        // Timer zero - Transition to next day
+        if (diff <= 0) {
+            checkPunishments();
         }
     };
 

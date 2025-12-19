@@ -7,6 +7,7 @@ import { storage } from '@/components/storage/LocalStorage';
 import CharacterCard from '@/components/character/CharacterCard';
 import GoodHabitCard from '@/components/habits/GoodHabitCard';
 import BadHabitCard from '@/components/habits/BadHabitCard';
+import ObjectiveCard from '@/components/objectives/ObjectiveCard';
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 
@@ -15,25 +16,33 @@ export default function Home() {
   const [character, setCharacter] = useState(null);
   const [goodHabits, setGoodHabits] = useState([]);
   const [badHabits, setBadHabits] = useState([]);
+  const [objectives, setObjectives] = useState([]);
   const [dailyChecks, setDailyChecks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
-    const [char, gHabits, bHabits, checks] = await Promise.all([
+    const [char, gHabits, bHabits, obj, checks] = await Promise.all([
       storage.getCharacter(),
       storage.getGoodHabits(),
       storage.getBadHabits(),
+      storage.getObjectives(),
       storage.getDailyChecks(today),
     ]);
     setCharacter(char);
     setGoodHabits(gHabits);
     setBadHabits(bHabits);
+    setObjectives(obj);
     setDailyChecks(checks);
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
+
+    // Listen for storage updates (e.g. from DailySystem penalties)
+    const handleUpdate = () => loadData();
+    window.addEventListener('levelup_data_update', handleUpdate);
+    return () => window.removeEventListener('levelup_data_update', handleUpdate);
   }, []);
 
   const handleCompleteGoodHabit = async (habit) => {
@@ -116,6 +125,33 @@ export default function Home() {
     await loadData();
   };
 
+  const handleUpdateObjectiveProgress = async (objective, newProgress) => {
+    await storage.updateObjective(objective.id, { progress: newProgress });
+    await loadData();
+  };
+
+  const handleCompleteObjective = async (objective) => {
+    if (!character) return;
+    const expGain = objective.exp_reward || 500;
+    const goldGain = objective.gold_reward || 100;
+
+    await storage.updateObjective(objective.id, { status: 'concluido', progress: 100 });
+
+    await storage.updateCharacter({
+      current_exp: (character.current_exp || 0) + expGain,
+      gold: (character.gold || 0) + goldGain,
+    });
+
+    await storage.addActivityLog({
+      activity: `Objetivo concluído: ${objective.title}`,
+      type: 'objective_progress',
+      exp_change: expGain,
+      gold_change: goldGain,
+    });
+
+    await loadData();
+  };
+
   const isHabitCompletedToday = (habitId, type) => {
     return dailyChecks.some(
       (check) => check.habit_id === habitId && check.habit_type === type && check.completed
@@ -190,6 +226,42 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        {/* Objectives Section */}
+        {objectives.filter(o => o.status === 'ativo').length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                </div>
+                <h2 className="font-bold text-white">Objetivos Ativos</h2>
+              </div>
+              <Link to={createPageUrl('Objectives')}>
+                <Button size="sm" variant="ghost" className="text-cyan-400 hover:text-cyan-300">
+                  Ver Todos
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {objectives
+                .filter(o => o.status === 'ativo')
+                .slice(0, 2)
+                .map((objective) => (
+                  <ObjectiveCard
+                    key={objective.id}
+                    objective={objective}
+                    onUpdateProgress={handleUpdateObjectiveProgress}
+                    onComplete={handleCompleteObjective}
+                  />
+                ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Daily Evolution Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
