@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Target, Zap, Heart, Shield, Bell } from 'lucide-react';
+import { ArrowLeft, Save, User, Target, Zap, Heart, Shield, Bell, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,28 @@ export default function CharacterSettings() {
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       toast.error('Erro ao pedir permissão');
+    }
+  };
+
+  const handleFullReset = async () => {
+    const confirmed = window.confirm(
+      "TEM CERTEZA? ☠️\n\nIsso irá resetar seu nível, ouro, vida e experiência para o valor inicial.\n\nEsta ação NÃO pode ser desfeita."
+    );
+
+    if (confirmed) {
+      setIsLoading(true);
+      try {
+        await storage.resetGame();
+        toast.success('Sistema resetado com sucesso!');
+        setTimeout(() => {
+          window.location.href = createPageUrl('Home');
+        }, 1000);
+      } catch (error) {
+        console.error('Error resetting game:', error);
+        toast.error('Erro ao resetar sistema');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -258,6 +280,29 @@ export default function CharacterSettings() {
               </CardContent>
             </Card>
           )}
+
+          {/* Reset System Section */}
+          <Card className="bg-slate-900/50 border-red-900/40">
+            <CardHeader>
+              <CardTitle className="text-red-400 flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Zona de Perigo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-400">
+                Atenção: Isso irá apagar todo o seu progresso de nível, ouro e atributos, mas manterá seus hábitos cadastrados.
+              </p>
+              <Button
+                type="button"
+                onClick={handleFullReset}
+                variant="destructive"
+                className="w-full bg-red-900/20 hover:bg-red-900/40 border-red-500/50 text-red-500"
+              >
+                Resetar Tudo e Começar do Zero
+              </Button>
+            </CardContent>
+          </Card>
 
           <Button
             type="submit"
