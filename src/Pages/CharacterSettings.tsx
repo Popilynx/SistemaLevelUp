@@ -106,16 +106,16 @@ export default function CharacterSettings() {
 
   const handleFullReset = async () => {
     const confirmed = window.confirm(
-      "TEM CERTEZA? ☠️\n\nIsso irá resetar seu nível, ouro, vida e experiência para o valor inicial.\n\nEsta ação NÃO pode ser desfeita."
+      "TEM CERTEZA? ☠️\n\nIsso irá resetar TUDO:\n- Nível, XP, Gold e Vida\n- Inventário e Buffs/Debuffs\n- Progresso de Objetivos\n- Habilidades (voltam ao nível 1)\n- Boss Diário\n- Logs de Atividade\n- Atividades marcadas\n\nEsta ação NÃO pode ser desfeita."
     );
 
     if (confirmed) {
       setIsLoading(true);
       try {
         await storage.resetGame();
-        toast.success('Sistema resetado com sucesso!');
+        toast.success('Sistema resetado! Recarregando...');
         setTimeout(() => {
-          window.location.href = createPageUrl('Home');
+          window.location.reload(); // Force full page reload
         }, 1000);
       } catch (error) {
         console.error('Error resetting game:', error);

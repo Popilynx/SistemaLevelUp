@@ -8,6 +8,7 @@ export const createPageUrl = (page: string): string => {
     'CharacterSettings': '/character-settings',
     'ActivityLog': '/activity-log',
     'Market': '/market',
+    'Inventory': '/inventory',
   };
 
   return pageMap[page] || '/';

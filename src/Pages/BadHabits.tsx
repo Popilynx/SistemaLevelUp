@@ -60,7 +60,7 @@ export default function BadHabits() {
       // GAME OVER
       await storage.resetGame();
       alert(`☠️ GAME OVER ☠️\n\nSua vida chegou a zero.\nO jogo foi reiniciado com Dificuldade ${difficulty + 1}.\nPenalidades aumentadas em 50%.`);
-      await loadData();
+      window.location.reload(); // Force full page reload
       return;
     }
 

@@ -478,18 +478,65 @@ export const storage = {
       health: 1000,
       max_health: 1000,
       gold: 0,
+      inventory: [], // Clear inventory
+      active_buffs: [], // Clear buffs
+      active_debuffs: [], // Clear debuffs
       difficulty: newDifficulty,
       reset_count: (character.reset_count || 0) + 1,
       last_reset_date: new Date().toISOString(),
     };
 
     localStorage.setItem(STORAGE_KEYS.CHARACTER, JSON.stringify(newCharacter));
+
+    // Reset good habits streaks
     const goodHabits = await storage.getGoodHabits();
-    const resetHabits = goodHabits.map((h: any) => ({ ...h, streak: 0 }));
+    const resetHabits = goodHabits.map((h: any) => ({ ...h, streak: 0, best_streak: 0 }));
     localStorage.setItem(STORAGE_KEYS.GOOD_HABITS, JSON.stringify(resetHabits));
 
+    // Reset bad habits
+    const badHabits = await storage.getBadHabits();
+    const resetBadHabits = badHabits.map((h: any) => ({
+      ...h,
+      days_clean: 0,
+      total_falls: 0,
+      monthly_falls: 0
+    }));
+    localStorage.setItem(STORAGE_KEYS.BAD_HABITS, JSON.stringify(resetBadHabits));
+
+    // Reset skills to level 1
+    const skills = await storage.getSkills();
+    console.log('Resetting skills:', skills.length);
+    const resetSkills = skills.map((s: any) => ({
+      ...s,
+      current_exp: 0,
+      level: 1
+    }));
+    localStorage.setItem(STORAGE_KEYS.SKILLS, JSON.stringify(resetSkills));
+    console.log('Skills reset complete');
+
+    // Reset objectives progress
+    const objectives = await storage.getObjectives();
+    console.log('Resetting objectives:', objectives.length);
+    const resetObjectives = objectives.map((o: any) => ({
+      ...o,
+      progress: 0,
+      status: 'ativo' // Reset ALL objectives to active
+    }));
+    localStorage.setItem(STORAGE_KEYS.OBJECTIVES, JSON.stringify(resetObjectives));
+    console.log('Objectives reset complete');
+
+    // Clear all daily checks
+    localStorage.setItem(STORAGE_KEYS.DAILY_CHECKS, JSON.stringify([]));
+
+    // Reset daily boss (will generate new one on next load)
+    localStorage.removeItem(STORAGE_KEYS.DAILY_BOSS);
+
+    // Clear activity logs (keep only the reset message)
+    localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOG, JSON.stringify([]));
+
+    // Add reset activity log
     await storage.addActivityLog({
-      activity: `RENASCIMENTO: Dificuldade Aumentada para ${newDifficulty}`,
+      activity: `🔄 RENASCIMENTO: Dificuldade Aumentada para ${newDifficulty}`,
       type: 'system',
       exp_change: 0,
       gold_change: 0,
