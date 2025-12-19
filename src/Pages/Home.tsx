@@ -432,7 +432,7 @@ export default function Home() {
 
             <div className="space-y-3">
               <AnimatePresence>
-                {goodHabits.slice(0, 5).map((habit) => (
+                {goodHabits.map((habit) => (
                   <GoodHabitCard
                     key={habit.id}
                     habit={habit}
@@ -471,7 +471,7 @@ export default function Home() {
 
             <div className="space-y-3">
               <AnimatePresence>
-                {badHabits.slice(0, 5).map((habit) => (
+                {badHabits.map((habit) => (
                   <BadHabitCard
                     key={habit.id}
                     habit={habit}
