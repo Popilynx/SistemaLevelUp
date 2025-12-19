@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Target, Swords, BookOpen, Scroll, Settings, ShoppingBag, Activity } from 'lucide-react';
+import { Plus, Target, Swords, BookOpen, Scroll, Settings, ShoppingBag, Activity, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { storage } from '@/components/storage/LocalStorage';
 import CharacterCard from '@/components/character/CharacterCard';
+import DailyBossCard from '@/components/character/DailyBossCard';
+import { ComboCounter, ParticleExplosion } from '@/components/ui/VisualJuice';
 import GoodHabitCard from '@/components/habits/GoodHabitCard';
 import BadHabitCard from '@/components/habits/BadHabitCard';
 import ObjectiveCard from '@/components/objectives/ObjectiveCard';
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function Home() {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -18,38 +21,108 @@ export default function Home() {
   const [badHabits, setBadHabits] = useState([]);
   const [objectives, setObjectives] = useState([]);
   const [dailyChecks, setDailyChecks] = useState([]);
+  const [dailyBoss, setDailyBoss] = useState(null);
+  const [combo, setCombo] = useState(0);
+  const [particles, setParticles] = useState<{ x: number, y: number, id: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
-    const [char, gHabits, bHabits, obj, checks] = await Promise.all([
+    const [char, gHabits, bHabits, obj, checks, boss] = await Promise.all([
       storage.getCharacter(),
       storage.getGoodHabits(),
       storage.getBadHabits(),
       storage.getObjectives(),
       storage.getDailyChecks(today),
+      storage.getDailyBoss(),
     ]);
     setCharacter(char);
     setGoodHabits(gHabits);
     setBadHabits(bHabits);
     setObjectives(obj);
     setDailyChecks(checks);
+    setDailyBoss(boss);
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
 
+    // Debuff expiration check every minute
+    const debuffInterval = setInterval(async () => {
+      const char = await storage.getCharacter();
+      if (!char) return;
+
+      const now = new Date();
+      let changed = false;
+      const updates: any = {};
+
+      if (char.active_debuffs && char.active_debuffs.length > 0) {
+        const validDebuffs = char.active_debuffs.filter((d: any) => {
+          const startTime = new Date(d.start_time);
+          const diffMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
+          return diffMinutes < d.duration_minutes;
+        });
+        if (validDebuffs.length !== char.active_debuffs.length) {
+          updates.active_debuffs = validDebuffs;
+          changed = true;
+        }
+      }
+
+      if (char.active_buffs && char.active_buffs.length > 0) {
+        const validBuffs = char.active_buffs.filter((b: any) => {
+          const startTime = new Date(b.start_time);
+          const diffMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
+          return diffMinutes < b.duration_minutes;
+        });
+        if (validBuffs.length !== char.active_buffs.length) {
+          updates.active_buffs = validBuffs;
+          changed = true;
+        }
+
+        // Health Regeneration Logic
+        if (validBuffs.some((b: any) => b.type === 'health_regen')) {
+          const currentHealth = char.health || 0;
+          const maxHealth = char.max_health || 1000;
+          if (currentHealth < maxHealth) {
+            updates.health = Math.min(currentHealth + 10, maxHealth);
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        await storage.updateCharacter(updates);
+        loadData();
+        // Only toast if status changed (buffs/debuffs removed)
+        if (updates.active_debuffs || updates.active_buffs) {
+          toast.info("O status do seu personagem mudou!");
+        }
+      }
+    }, 60000);
+
     // Listen for storage updates (e.g. from DailySystem penalties)
     const handleUpdate = () => loadData();
     window.addEventListener('levelup_data_update', handleUpdate);
-    return () => window.removeEventListener('levelup_data_update', handleUpdate);
+    return () => {
+      window.removeEventListener('levelup_data_update', handleUpdate);
+      clearInterval(debuffInterval);
+    };
   }, []);
 
   const handleCompleteGoodHabit = async (habit) => {
     if (!character) return;
 
-    const expGain = habit.exp_reward || 10;
-    const goldGain = habit.gold_reward || 5;
+    const inventory = character?.inventory || [];
+    const debuffs = character?.active_debuffs || [];
+    const buffs = character?.active_buffs || [];
+
+    const bonusExpMult = inventory.reduce((acc: number, item: any) => acc + (item.bonus_exp || 0), 0);
+    const expBuffMult = buffs.some((b: any) => b.type === 'exp_boost') ? 1.5 : 1.0;
+    const expDebuffMult = debuffs.some((d: any) => d.type === 'tired') ? 0.5 : 1.0;
+    const goldDebuffMult = debuffs.some((d: any) => d.type === 'weak') ? 0.8 : 1.0;
+
+    let expGain = Math.floor((habit.exp_reward || 10) * (1 + bonusExpMult) * expBuffMult * expDebuffMult);
+    const goldGain = Math.floor((habit.gold_reward || 5) * goldDebuffMult);
     const newStreak = (habit.streak || 0) + 1;
 
     await storage.addDailyCheck({
@@ -88,14 +161,63 @@ export default function Home() {
       gold_change: goldGain,
     });
 
+    // --- COMBO & PARTICLES ---
+    setCombo(prev => prev + 1);
+    const newParticle = { x: window.innerWidth / 2, y: window.innerHeight / 2, id: Date.now() };
+    setParticles(prev => [...prev, newParticle]);
+    setTimeout(() => {
+      setParticles(prev => prev.filter(p => p.id !== newParticle.id));
+    }, 1000);
+
+    // --- BOSS DAMAGE LOGIC ---
+    if (dailyBoss && dailyBoss.status === 'alive') {
+      const bonusBossDamage = inventory.reduce((acc: number, item: any) =>
+        item.name === 'Espada da Disciplina' ? acc + 0.2 : acc, 0
+      );
+
+      const damageBuffMult = buffs.some((b: any) => b.type === 'boss_damage') ? 1.3 : 1.0;
+      const damageDebuffMult = debuffs.some((d: any) => d.type === 'confused') ? 0.7 : 1.0;
+
+      const damage = Math.floor(expGain * 15 * (1 + bonusBossDamage) * damageBuffMult * damageDebuffMult);
+      const newBossHealth = Math.max(dailyBoss.health - damage, 0);
+      const isDefeated = newBossHealth === 0;
+
+      const bossUpdates: any = { health: newBossHealth };
+      if (isDefeated) {
+        bossUpdates.status = 'defeated';
+        // Award boss rewards
+        await storage.updateCharacter({
+          gold: (character.gold || 0) + goldGain + dailyBoss.base_gold_reward,
+          total_exp: (character.total_exp || 0) + expGain + dailyBoss.base_exp_reward,
+          current_exp: remainingExp + dailyBoss.base_exp_reward, // Note: Simplified level up here
+        });
+
+        await storage.addActivityLog({
+          activity: `DERROTOU O BOSS: ${dailyBoss.name}!`,
+          type: 'boss_defeat',
+          gold_change: dailyBoss.base_gold_reward,
+          exp_change: dailyBoss.base_exp_reward,
+        });
+
+        toast.success(`💥 VOCÊ DERROTOU ${dailyBoss.name.toUpperCase()}!`);
+      }
+
+      await storage.updateDailyBoss(bossUpdates);
+    }
+
     await loadData();
   };
 
   const handleBadHabitFail = async (habit) => {
     if (!character) return;
 
-    const healthPenalty = habit.health_penalty || 50;
+    const inventory = character?.inventory || [];
+    const reductionMult = inventory.reduce((acc: number, item: any) => acc + (item.reduction_penalty || 0), 0);
+
+    const healthPenalty = Math.floor((habit.health_penalty || 50) * (1 - reductionMult));
     const expPenalty = habit.exp_penalty || 20;
+
+    setCombo(0); // Reset combo on fail
 
     await storage.addDailyCheck({
       habit_id: habit.id,
@@ -121,6 +243,22 @@ export default function Home() {
       exp_change: -expPenalty,
       health_change: -healthPenalty,
     });
+
+    // --- DEBUFF LOGIC ---
+    if (Math.random() > 0.5) {
+      const potentialDebuffs = [
+        { type: 'tired', name: 'Cansaço', icon: '😫', description: 'Você se sente exausto.', duration_minutes: 60 },
+        { type: 'confused', name: 'Confusão', icon: '🌀', description: 'Difícil se concentrar.', duration_minutes: 30 },
+        { type: 'weak', name: 'Fraqueza', icon: '🤢', description: 'Menos força hoje.', duration_minutes: 45 },
+      ];
+      const debuff = potentialDebuffs[Math.floor(Math.random() * potentialDebuffs.length)];
+      await storage.addDebuff({
+        ...debuff,
+        id: Date.now().toString(),
+        start_time: new Date().toISOString()
+      });
+      toast.error(`STATUS: ${debuff.name.toUpperCase()}! ${debuff.description}`);
+    }
 
     await loadData();
   };
@@ -164,6 +302,7 @@ export default function Home() {
     { icon: BookOpen, label: 'Objetivos', page: 'Objectives', color: 'text-cyan-400' },
     { icon: Scroll, label: 'Habilidades', page: 'Skills', color: 'text-purple-400' },
     { icon: ShoppingBag, label: 'Mercado', page: 'Market', color: 'text-yellow-400' },
+    { icon: Package, label: 'Inventário', page: 'Inventory', color: 'text-orange-400' },
     { icon: Activity, label: 'Atividade', page: 'ActivityLog', color: 'text-blue-400' },
   ];
 
@@ -203,12 +342,18 @@ export default function Home() {
             </p>
           </motion.div>
 
-          {/* Character Card */}
-          <div className="max-w-lg mx-auto">
+          {/* Character and Boss Section */}
+          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CharacterCard character={character} />
+            <DailyBossCard boss={dailyBoss} isDefeated={dailyBoss?.status === 'defeated'} />
           </div>
         </div>
       </div>
+
+      <ComboCounter combo={combo} />
+      {particles.map(p => (
+        <ParticleExplosion key={p.id} x={p.x} y={p.y} />
+      ))}
 
       {/* Navigation Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8">

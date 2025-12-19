@@ -19,6 +19,29 @@ export interface Character {
   difficulty?: number;
   reset_count?: number;
   last_reset_date?: string;
+  inventory?: MarketItem[];
+  active_debuffs?: Debuff[];
+  active_buffs?: Buff[];
+}
+
+export interface Buff {
+  id: string;
+  type: 'exp_boost' | 'boss_damage' | 'health_regen';
+  name: string;
+  description: string;
+  icon: string;
+  duration_minutes: number;
+  start_time: string; // ISO string
+}
+
+export interface Debuff {
+  id: string;
+  type: 'tired' | 'confused' | 'weak' | 'poisoned';
+  name: string;
+  description: string;
+  icon: string;
+  duration_minutes: number;
+  start_time: string; // ISO string
 }
 
 export interface GoodHabit {
@@ -82,6 +105,15 @@ export interface MarketItem {
   category: string;
   times_purchased: number;
   created_date: string;
+  health_gain?: number;
+  bonus_exp?: number;
+  bonus_gold?: number;
+  bonus_health?: number;
+  reduction_penalty?: number;
+  is_equipped?: boolean;
+  max_uses?: number; // For consumable buffs
+  current_uses?: number;
+  is_consumable?: boolean;
 }
 
 export interface ActivityLog {
@@ -101,4 +133,16 @@ export interface DailyCheck {
   completed: boolean;
   date: string;
   timestamp: string;
+}
+
+export interface DailyBoss {
+  id: string;
+  name: string;
+  image: string;
+  health: number;
+  max_health: number;
+  status: 'alive' | 'defeated';
+  last_update: string;
+  base_gold_reward: number;
+  base_exp_reward: number;
 }

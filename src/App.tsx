@@ -10,6 +10,7 @@ import Skills from './Pages/Skills';
 import Market from './Pages/market';
 import CharacterSettings from './Pages/CharacterSettings';
 import ActivityLog from './Pages/ActivityLog';
+import Inventory from './Pages/Inventory';
 import { initializeDefaultData } from './components/storage/LocalStorage';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/skills" element={<Skills />} />
           <Route path="/market" element={<Market />} />
           <Route path="/character-settings" element={<CharacterSettings />} />
+          <Route path="/inventory" element={<Inventory />} />
           <Route path="/activity-log" element={<ActivityLog />} />
         </Routes>
       </Layout>

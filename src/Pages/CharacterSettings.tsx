@@ -17,6 +17,7 @@ export default function CharacterSettings() {
   const [formData, setFormData] = useState({
     name: '',
     main_objective: '',
+    secondary_objective: '',
     strengths: '',
     weaknesses: '',
     max_health: 1000,
@@ -34,6 +35,7 @@ export default function CharacterSettings() {
         setFormData({
           name: char.name || '',
           main_objective: char.main_objective || '',
+          secondary_objective: char.secondary_objective || '',
           strengths: char.strengths || '',
           weaknesses: char.weaknesses || '',
           max_health: char.max_health || 1000,
@@ -63,6 +65,7 @@ export default function CharacterSettings() {
           max_health: formData.max_health,
           profile_image: '',
           main_objective: formData.main_objective,
+          secondary_objective: formData.secondary_objective,
           strengths: formData.strengths,
           weaknesses: formData.weaknesses,
           hit_points: 1000,
@@ -176,6 +179,16 @@ export default function CharacterSettings() {
                   value={formData.main_objective}
                   onChange={(e) => setFormData({ ...formData, main_objective: e.target.value })}
                   placeholder="Ex: Ser uma pessoa melhor a cada dia"
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-300">Como você irá superar seus problemas?</Label>
+                <Textarea
+                  value={formData.secondary_objective}
+                  onChange={(e) => setFormData({ ...formData, secondary_objective: e.target.value })}
+                  placeholder="Ex: Superar todos os meus problemas"
                   className="bg-slate-800 border-slate-700 text-white"
                 />
               </div>

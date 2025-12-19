@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { storage } from '@/components/storage/LocalStorage';
 import { Skill, Objective } from '@/types';
+import RadarChart from '@/components/ui/RadarChart';
 
 export default function Skills() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -80,6 +81,20 @@ export default function Skills() {
     acc[cat].push(skill);
     return acc;
   }, {});
+
+  // Radar Data calculation
+  const radarData = Object.keys(categoryLabels).map(cat => {
+    const categorySkills = skillsByCategory[cat] || [];
+    const avgLevel = categorySkills.length > 0
+      ? categorySkills.reduce((sum, s) => sum + (s.level || 1), 0) / categorySkills.length
+      : 0;
+
+    return {
+      label: categoryLabels[cat as keyof typeof categoryLabels].split(' ').pop() || cat,
+      value: avgLevel,
+      max: 5
+    };
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
@@ -158,6 +173,31 @@ export default function Skills() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Radar Chart Section */}
+        {skills.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-12 bg-slate-900/50 border border-slate-800 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-2xl"
+          >
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-xl font-bold text-white mb-2">Visão Geral de Habilidades</h2>
+              <p className="text-slate-400 text-sm mb-6">Seu gráfico de radar atualizado com base nos níveis médios de cada categoria.</p>
+              <div className="grid grid-cols-2 gap-4">
+                {radarData.map(d => (
+                  <div key={d.label} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                    <span className="text-xs text-slate-300 font-medium">{d.label}: <span className="text-white">Lvl {d.value.toFixed(1)}</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex-shrink-0 bg-slate-950/50 rounded-2xl p-4 border border-slate-700/30">
+              <RadarChart data={radarData} size={280} />
+            </div>
+          </motion.div>
+        )}
 
         {/* Skills Grid */}
         {Object.entries(categoryLabels).map(([category, label]) => {

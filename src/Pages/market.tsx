@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ArrowLeft, Trash2, Coins, Package } from 'lucide-react';
+import { format, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import MarketItemCard from '@/components/market/MarketItemCard';
@@ -18,6 +19,8 @@ export default function Market() {
   const [marketItems, setMarketItems] = useState<any[]>([]);
   const [character, setCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [missedHabits, setMissedHabits] = useState<any[]>([]);
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -69,31 +72,133 @@ export default function Market() {
     }
 
     try {
-      const updatedChar = { ...character, gold: character.gold - item.price };
+      if (item.category === 'mercado_negro' && item.name === 'Recuperar Hábito Perdido') {
+        const missed = await storage.getMissedHabitsYesterday();
+        if (missed.length === 0) {
+          toast.info('Não há hábitos pendentes de ontem para recuperar!');
+          return;
+        }
+        setMissedHabits(missed);
+        setIsRecoveryOpen(true);
+        return; // Wait for selection
+      }
 
-      // Handle health gain items
+      await executePurchase(item);
+    } catch (error) {
+      toast.error('Erro ao processar compra');
+    }
+  };
+
+  const executePurchase = async (item: any) => {
+    const updatedChar = { ...character, gold: character.gold - item.price };
+
+    // --- INVENTORY & EQUIPMENT LOGIC ---
+    const isPermanent = item.category === 'especial' || item.category === 'cosmetic';
+    const isConsumable = item.category === 'boost' || item.category === 'consumivel' || item.is_consumable;
+
+    const needsInventory = isPermanent || isConsumable;
+
+    if (needsInventory) {
+      const inventory = [...(updatedChar.inventory || [])];
+
+      // Check for duplicates of permanent items
+      if (isPermanent && inventory.find((i: any) => i.name === item.name)) {
+        toast.error('Você já possui este item permanente!');
+        return;
+      }
+
+      const newItemEntry = {
+        ...item,
+        id: `${item.id}_${Date.now()}`, // unique instance ID for inventory
+        is_equipped: isPermanent,
+        current_uses: item.current_uses ?? (isConsumable ? 1 : undefined)
+      };
+
+      updatedChar.inventory = [...inventory, newItemEntry];
+
+      if (newItemEntry.is_equipped) {
+        toast.success(`${item.name} adquirido e equipado!`);
+      } else {
+        toast.success(`${item.name} adicionado ao inventário!`);
+      }
+    } else {
+      // Direct effect items (like health potions if they weren't in inventory)
       if (item.health_gain) {
         updatedChar.health = Math.min(updatedChar.health + item.health_gain, updatedChar.max_health);
       }
+      toast.success(`${item.name} usado com sucesso!`);
+    }
 
-      await storage.updateCharacter(updatedChar);
+    await storage.updateCharacter(updatedChar);
 
-      await storage.updateMarketItem(item.id, {
-        ...item,
-        times_purchased: (item.times_purchased || 0) + 1,
+    await storage.updateMarketItem(item.id, {
+      ...item,
+      times_purchased: (item.times_purchased || 0) + 1,
+    });
+
+    await storage.addActivityLog({
+      activity: `Comprou: ${item.name}`,
+      type: 'market_purchase',
+      gold_change: -item.price,
+      health_change: (!needsInventory && item.health_gain) ? item.health_gain : 0,
+    });
+
+    await loadData();
+  };
+
+  const handleRecoverHabit = async (habit: any) => {
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
+    try {
+      // 1. Add Daily Check for yesterday
+      await storage.addDailyCheck({
+        habit_id: habit.id,
+        habit_type: 'good',
+        date: yesterday,
+        completed: true,
+      });
+
+      // 2. Re-apply rewards (EXP and Gold)
+      const expGain = habit.exp_reward || 10;
+      const goldGain = habit.gold_reward || 5;
+
+      // Calculate new level if needed
+      const currentExp = (character.current_exp || 0) + expGain;
+      const expForNextLevel = (character.level || 1) * 500;
+      let newLevel = character.level || 1;
+      let remainingExp = currentExp;
+
+      if (currentExp >= expForNextLevel) {
+        newLevel += 1;
+        remainingExp = currentExp - expForNextLevel;
+      }
+
+      // Restore health/exp penalty that was likely applied by DailySystem
+      // Default penalty is 50 health and 20 exp
+      const healthRestore = 50;
+      const expRestore = 20;
+
+      await storage.updateCharacter({
+        current_exp: remainingExp,
+        total_exp: (character.total_exp || 0) + expGain + expRestore,
+        gold: (character.gold || 0) + goldGain - 50, // Subtract item cost
+        level: newLevel,
+        health: Math.min((character.health || 0) + healthRestore, character.max_health),
       });
 
       await storage.addActivityLog({
-        activity: `Comprou: ${item.name}`,
+        activity: `Recuperou hábito: ${habit.name}`,
         type: 'market_purchase',
-        gold_change: -item.price,
-        health_change: item.health_gain || 0,
+        exp_change: expGain + expRestore,
+        gold_change: -50,
+        health_change: healthRestore,
       });
 
-      toast.success(`${item.name} comprado com sucesso!`);
+      toast.success(`Hábito "${habit.name}" recuperado!`);
+      setIsRecoveryOpen(false);
       await loadData();
     } catch (error) {
-      toast.error('Erro ao comprar item');
+      toast.error('Erro ao recuperar hábito');
     }
   };
 
@@ -109,6 +214,7 @@ export default function Market() {
   const categoryLabels = {
     recompensa: { label: '🎁 Recompensas', color: 'text-purple-400' },
     boost: { label: '🧪 Poções e Boosts', color: 'text-cyan-400' },
+    consumivel: { label: '🧼 Consumíveis', color: 'text-emerald-400' },
     mercado_negro: { label: '💀 Mercado Negro', color: 'text-red-400' },
     cosmetic: { label: '✨ Cosméticos', color: 'text-amber-400' },
     especial: { label: '💎 Especiais', color: 'text-orange-400' },
@@ -206,10 +312,11 @@ export default function Market() {
                       <Label className="text-slate-300">Categoria</Label>
                       <Select
                         value={newItem.category}
-                        onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                        onChange={(e: any) => setNewItem({ ...newItem, category: e.target.value })}
                       >
                         <SelectItem value="recompensa">🎁 Recompensa</SelectItem>
                         <SelectItem value="boost">🧪 Boost/Poção</SelectItem>
+                        <SelectItem value="consumivel">🧼 Consumível</SelectItem>
                         <SelectItem value="mercado_negro">💀 Mercado Negro</SelectItem>
                         <SelectItem value="cosmetic">✨ Cosmético</SelectItem>
                         <SelectItem value="especial">💎 Especial</SelectItem>
@@ -229,6 +336,31 @@ export default function Market() {
             </Dialog>
           </div>
         </div>
+
+        {/* Recovery Dialog */}
+        <Dialog open={isRecoveryOpen} onOpenChange={setIsRecoveryOpen}>
+          <DialogContent className="bg-slate-900 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Qual hábito deseja recuperar?</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 mt-4">
+              {missedHabits.map((habit) => (
+                <Button
+                  key={habit.id}
+                  onClick={() => handleRecoverHabit(habit)}
+                  variant="outline"
+                  className="w-full justify-start gap-3 border-slate-700 hover:border-cyan-500 hover:bg-cyan-500/10 text-slate-300 hover:text-white py-6"
+                >
+                  <span className="text-xl">{habit.icon}</span>
+                  <div className="text-left">
+                    <p className="font-semibold">{habit.name}</p>
+                    <p className="text-xs text-slate-500">Recupere suas recompensas de ontem</p>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Items by Category */}
         {Object.entries(categoryLabels).map(([category, { label, color }]) => {

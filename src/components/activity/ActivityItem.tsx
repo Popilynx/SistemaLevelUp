@@ -12,6 +12,8 @@ const typeConfig = {
   purchase: { icon: ShoppingBag, color: 'text-purple-400', bg: 'bg-purple-500/20' },
   level_up: { icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
   penalty: { icon: AlertCircle, color: 'text-red-400', bg: 'bg-red-500/20' },
+  boss_defeat: { icon: TrendingUp, color: 'text-yellow-500', bg: 'bg-yellow-500/20' },
+  boss_damage: { icon: TrendingUp, color: 'text-orange-500', bg: 'bg-orange-500/20' },
 };
 
 export default function ActivityItem({ activity }) {
@@ -31,7 +33,7 @@ export default function ActivityItem({ activity }) {
       <div className="flex-1">
         <p className="text-sm text-white">{activity.activity}</p>
         <p className="text-xs text-slate-500">
-          {format(new Date(activity.created_date), "dd MMM, HH:mm", { locale: ptBR })}
+          {format(new Date(activity.timestamp || new Date()), "dd MMM, HH:mm", { locale: ptBR })}
         </p>
       </div>
 

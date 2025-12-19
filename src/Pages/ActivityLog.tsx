@@ -19,7 +19,7 @@ export default function ActivityLogPage() {
 
   const loadActivities = async () => {
     try {
-      const data = await storage.getActivityLog();
+      const data = await storage.getActivityLogs();
       setActivities(data);
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -28,7 +28,7 @@ export default function ActivityLogPage() {
 
   // Group activities by date
   const groupedActivities = activities.reduce((acc: Record<string, ActivityLog[]>, activity: ActivityLog) => {
-    const date = format(new Date(), 'yyyy-MM-dd');
+    const date = format(new Date(activity.timestamp || new Date()), 'yyyy-MM-dd');
     if (!acc[date]) acc[date] = [];
     acc[date].push(activity);
     return acc;
@@ -60,8 +60,8 @@ export default function ActivityLogPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white">Log de Atividade</h1>
-            <p className="text-slate-400 text-sm">Histórico de todas as suas ações</p>
+            <h1 className="text-2xl font-bold text-white">Diário de Aventuras</h1>
+            <p className="text-slate-400 text-sm">A crônica de sua jornada rumo ao topo</p>
           </div>
         </div>
 
@@ -104,9 +104,9 @@ export default function ActivityLogPage() {
               className="text-center py-16 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700"
             >
               <Activity className="w-16 h-16 mx-auto text-slate-600 mb-4" />
-              <p className="text-slate-400">Nenhuma atividade registrada ainda</p>
+              <p className="text-slate-400">Nenhum registro no diário ainda</p>
               <p className="text-slate-500 text-sm mt-2">
-                Complete hábitos e objetivos para ver seu histórico aqui
+                Suas conquistas e batalhas aparecerão nestas páginas
               </p>
             </motion.div>
           )}

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Check, Flame, Zap, Coins } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface GoodHabitCardProps {
@@ -55,19 +56,11 @@ export default function GoodHabitCard({ habit, isCompleted, onComplete }: GoodHa
           </div>
         </div>
 
-        <Button
-          onClick={() => !isCompleted && onComplete(habit)}
+        <Checkbox
+          checked={isCompleted}
+          onCheckedChange={() => !isCompleted && onComplete(habit)}
           disabled={isCompleted}
-          size="sm"
-          className={cn(
-            "rounded-full w-10 h-10 p-0",
-            isCompleted
-              ? "bg-green-500 text-white"
-              : "bg-slate-700 hover:bg-cyan-500 text-slate-400 hover:text-white"
-          )}
-        >
-          <Check className="w-5 h-5" />
-        </Button>
+        />
       </div>
     </motion.div>
   );
