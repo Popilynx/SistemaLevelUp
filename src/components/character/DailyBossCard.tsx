@@ -11,7 +11,7 @@ interface DailyBossCardProps {
 export default function DailyBossCard({ boss, isDefeated }: DailyBossCardProps) {
     if (!boss) return null;
 
-    const healthPercentage = (boss.health / boss.max_health) * 100;
+    const healthPercentage = boss.stats ? (boss.stats.health / boss.stats.max_health) * 100 : 0;
 
     return (
         <motion.div
@@ -59,7 +59,7 @@ export default function DailyBossCard({ boss, isDefeated }: DailyBossCardProps) 
                         {isDefeated ? "RECOMPENSA COLETADA" : "PONTOS DE VIDA"}
                     </span>
                     <span className="text-slate-400 font-mono">
-                        {isDefeated ? "---" : `${Math.ceil(boss.health)} / ${boss.max_health}`}
+                        {isDefeated ? "---" : `${Math.ceil(boss.stats?.health ?? 0)} / ${boss.stats?.max_health ?? 1}`}
                     </span>
                 </div>
                 <div className="h-4 bg-slate-950/50 rounded-full overflow-hidden border border-slate-700/30 p-0.5">

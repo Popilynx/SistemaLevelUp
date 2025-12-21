@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ArrowLeft, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 import GoodHabitCard from '@/components/habits/GoodHabitCard';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { storage } from '@/components/storage/LocalStorage';
+import { perkService } from '@/services/perkService';
+import { questService } from '@/services/questService';
 import { format } from 'date-fns';
 
 interface GoodHabit {
@@ -32,6 +35,8 @@ interface Character {
   total_exp: number;
   level: number;
   gold: number;
+  inventory?: any[];
+  active_buffs?: any[];
 }
 
 export default function GoodHabits() {
@@ -70,10 +75,39 @@ export default function GoodHabits() {
   const handleCompleteHabit = async (habit: GoodHabit) => {
     if (!character) return;
 
-    const expGain = habit.exp_reward || 10;
+    // 1. Calculate Bonuses from Equipment & Buffs
+    let multiplier = 1;
+    const equippedItems = (character.inventory || []).filter((i: any) => i.is_equipped);
+    const activeBuffs = character.active_buffs || [];
+
+    // Equipment Bonuses
+    equippedItems.forEach((item: any) => {
+      const bonus = item.bonus_exp || item.exp_bonus || 0;
+      if (bonus > 0) {
+        if (!item.exp_category || item.exp_category === habit.skill_category) {
+          multiplier += bonus;
+        }
+      }
+    });
+
+    // Active Buff Bonuses (Potions/Scrolls)
+    activeBuffs.forEach((buff: any) => {
+      if (buff.type === 'exp_boost') {
+        // Parse description or assume a standard value if not explicit, 
+        // but traditionally these might set a specific multiplier. 
+        // For simplicity, let's assume "Boost de EXP 2x" adds +100% (multiplier +1)
+        if (buff.name.includes('2x')) multiplier += 1;
+        else multiplier += 0.15; // Standard boost
+      }
+    });
+
+    // 2. Calculate Final XP
+    const baseExp = habit.exp_reward || 10;
+    const expGain = Math.floor(baseExp * multiplier);
     const goldGain = habit.gold_reward || 5;
     const newStreak = (habit.streak || 0) + 1;
 
+    // 3. Mark Daily Check & Streak
     await storage.addDailyCheck({
       habit_id: habit.id,
       habit_type: 'good',
@@ -86,6 +120,7 @@ export default function GoodHabits() {
       best_streak: Math.max(newStreak, habit.best_streak || 0),
     });
 
+    // 4. Update Character (User Level)
     const newExp = (character.current_exp || 0) + expGain;
     const expForNextLevel = (character.level || 1) * 500;
     let newLevel = character.level || 1;
@@ -103,12 +138,58 @@ export default function GoodHabits() {
       level: newLevel,
     });
 
+    // 5. Update Skill XP
+    let skillMessage = '';
+    if (habit.skill_category) {
+      try {
+        const skills = await storage.getSkills();
+        const skillIndex = skills.findIndex((s: any) => s.category === habit.skill_category);
+
+        if (skillIndex !== -1) {
+          const skill = skills[skillIndex];
+          const skillExpGain = Math.floor(expGain * 0.5); // 50% of total XP goes to skill
+
+          const skillNextLevelExp = (skill.level || 1) * 500; // Simple formula
+          let newSkillExp = (skill.current_exp || 0) + skillExpGain;
+          let newSkillLevel = skill.level || 1;
+
+          if (newSkillExp >= skillNextLevelExp) {
+            newSkillLevel += 1;
+            newSkillExp = newSkillExp - skillNextLevelExp;
+            skillMessage = ` | 🔥 ${skill.name} Subiu para Nível ${newSkillLevel}!`;
+          } else {
+            skillMessage = ` | +${skillExpGain} XP em ${skill.name}`;
+          }
+
+          await storage.updateSkill(skill.id, {
+            current_exp: newSkillExp,
+            level: newSkillLevel
+          });
+
+          // Check for Perk Unlocks
+          const allSkills = await storage.getSkills(); // Refresh skills to get updated level
+          const hasNewUnlocks = perkService.checkUnlocks(allSkills);
+          if (hasNewUnlocks) {
+            toast.success("✨ NOVO PERK DESBLOQUEADO! Verifique suas Habilidades.");
+          }
+
+        }
+      } catch (error) {
+        console.error("Error updating skill", error);
+      }
+    }
+
+    // 6. Log Activity
     await storage.addActivityLog({
-      activity: `Completou: ${habit.name}`,
+      activity: `Completou: ${habit.name}${skillMessage}`,
       type: 'habit_complete',
       exp_change: expGain,
       gold_change: goldGain,
     });
+
+    // 7. Quest Progress
+    questService.updateProgress('habit_count', 1, habit.skill_category);
+    questService.updateProgress('earn_gold', goldGain);
 
     await loadData();
   };

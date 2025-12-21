@@ -1,4 +1,5 @@
 import { format, subDays, parseISO } from 'date-fns';
+import { characterService } from '../../services/characterService';
 
 const STORAGE_KEYS = {
   CHARACTER: 'levelup_character',
@@ -22,6 +23,51 @@ const POTENTIAL_BOSSES = [
 ];
 
 const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// --- MARKET ROTATION SYSTEM ---
+const PERMANENT_MARKET_ITEMS = [
+  { id: 'perm_1', name: "Poção Simples", description: "Restaura +50 HP", icon: "🧪", price: 100, category: "boost", health_gain: 50, is_consumable: true },
+  { id: 'perm_2', name: "Poção Mediana", description: "Restaura +150 HP", icon: "⚗️", price: 200, category: "boost", health_gain: 150, is_consumable: true },
+  { id: 'perm_3', name: "Recuperar Hábito Perdido", description: "Recupera um hábito esquecido de ontem", icon: "⏳", price: 50, category: "mercado_negro" },
+  { id: 'perm_4', name: "Dia de Folga", description: "Um dia sem obrigações para relaxar", icon: "🏖️", price: 200, category: "recompensa" },
+  { id: 'perm_5', name: "Poção de Claridade", description: "Remove todos os debuffs negativos", icon: "✨", price: 80, category: "consumivel", is_consumable: true },
+];
+
+const ROTATING_MARKET_POOL = [
+  // --- WEAPONS ---
+  { name: "Faca de Caça", description: "+8 Dano. Boa para sobrevivência.", icon: "🔪", price: 250, category: "equipment", slot: "main_hand", damage: 8 },
+  { name: "Espada Bastarda", description: "+18 Dano. Pesada mas letal.", icon: "⚔️", price: 650, category: "equipment", slot: "main_hand", damage: 18 },
+  { name: "Adaga de Cristal", description: "+12 Dano, +10% Crítico. Brilha no escuro.", icon: "💎", price: 800, category: "equipment", slot: "main_hand", damage: 12, crit_chance: 0.10 },
+  { name: "Cajado das Sombras", description: "+25% EXP em Estudos (Sombrio).", icon: "🌑", price: 1200, category: "equipment", slot: "main_hand", exp_bonus: 0.25, exp_category: "estudo" },
+  { name: "Varinha de Teixo", description: "+12% EXP Geral. Foco mágico.", icon: "🪄", price: 750, category: "equipment", slot: "main_hand", exp_bonus: 0.12 },
+  { name: "Arco Longo Élfico", description: "+25 Dano. Precisão mortal.", icon: "🏹", price: 1100, category: "equipment", slot: "main_hand", damage: 25 },
+  { name: "Maça de Guerra", description: "+22 Dano. Esmaga obstáculos.", icon: "🔨", price: 700, category: "equipment", slot: "main_hand", damage: 22 },
+  { name: "Lança Montada", description: "+30 Dano. Ataque perfurante.", icon: "🔱", price: 1400, category: "equipment", slot: "main_hand", damage: 30 },
+  { name: "Grimório Antigo", description: "+30% EXP em Leitura.", icon: "📖", price: 900, category: "equipment", slot: "off_hand", exp_bonus: 0.30, exp_category: "leitura" },
+  { name: "Escudo Torre", description: "+50 HP. Proteção total.", icon: "🛡️", price: 600, category: "equipment", slot: "off_hand", health_bonus: 50 },
+
+  // --- ARMOR ---
+  { name: "Elmo de Gladiador", description: "+35 HP. Intimidador.", icon: "💂", price: 550, category: "equipment", slot: "head", health_bonus: 35 },
+  { name: "Coroa Real", description: "+15% Ouro ganho.", icon: "👑", price: 2000, category: "equipment", slot: "head", bonus_gold: 0.15 },
+  { name: "Manto de Mago", description: "+15% EXP Geral. Tecido encantado.", icon: "👘", price: 1200, category: "equipment", slot: "body", exp_bonus: 0.15 },
+  { name: "Cota de Malha", description: "+60 HP. Resistente e flexível.", icon: "👕", price: 800, category: "equipment", slot: "body", health_bonus: 60 },
+  { name: "Armadura de Placas", description: "+100 HP. Tanque de guerra.", icon: "🥋", price: 1800, category: "equipment", slot: "body", health_bonus: 100 },
+  { name: "Calças de Couro Batido", description: "+25 HP. Resistente a rasgos.", icon: "👖", price: 300, category: "equipment", slot: "legs", health_bonus: 25 },
+  { name: "Grevas de Aço", description: "+40 HP. Proteção robusta.", icon: "🦵", price: 500, category: "equipment", slot: "legs", health_bonus: 40 },
+  { name: "Botas Aladas", description: "+10% EXP em Saúde. Leve como o vento.", icon: "🧚", price: 900, category: "equipment", slot: "feet", exp_bonus: 0.10, exp_category: "saude" },
+  { name: "Botas de Caminhada", description: "+20 HP. Conforto duradouro.", icon: "🥾", price: 250, category: "equipment", slot: "feet", health_bonus: 20 },
+
+  // --- ACCESSORIES ---
+  { name: "Anel da Sabedoria", description: "+8% EXP em Estudos.", icon: "💍", price: 600, category: "equipment", slot: "ring", exp_bonus: 0.08, exp_category: "estudo" },
+  { name: "Anel da Vitalidade", description: "+50 HP.", icon: "🩸", price: 500, category: "equipment", slot: "ring", health_bonus: 50 },
+  { name: "Colar de Pérolas", description: "+30% Ouro em Lazer.", icon: "📿", price: 800, category: "equipment", slot: "neck", bonus_gold: 0.30 },
+  { name: "Talismã da Sorte", description: "+5% Crítico.", icon: "🍀", price: 1500, category: "equipment", slot: "neck", crit_chance: 0.05 },
+
+  // --- CONSUMABLES & SCROLLS ---
+  { name: "Elixir de Força", description: "+50 Dano no próximo Boss (1 uso).", icon: "💪", price: 200, category: "boost", max_uses: 1, current_uses: 1, is_consumable: true },
+  { name: "Pergaminho Proibido", description: "+100% EXP (3 usos). Perigoso.", icon: "📜", price: 3000, category: "boost", bonus_exp: 1.0, max_uses: 3, current_uses: 3, is_consumable: true },
+  { name: "Incenso Calmante", description: "Recupera 10 HP/min por 1h.", icon: "🕯️", price: 150, category: "boost", is_consumable: true },
+];
 
 export const initializeDefaultData = () => {
   const character = localStorage.getItem(STORAGE_KEYS.CHARACTER);
@@ -72,6 +118,7 @@ export const initializeDefaultData = () => {
         { id: generateId(), title: "Comprar um carro novo", description: "Economizar para o carro dos sonhos", is_main: false, progress: 0, status: "em_andamento", exp_reward: 500, gold_reward: 200, created_date: new Date().toISOString() },
       ],
       marketItems: [
+        // Potions & Consumables
         { id: generateId(), name: "Poção Simples", description: "Restaura +50 HP", icon: "🧪", price: 100, category: "boost", health_gain: 50, times_purchased: 0, is_consumable: true, created_date: new Date().toISOString() },
         { id: generateId(), name: "Poção Mediana", description: "Restaura +150 HP", icon: "⚗️", price: 200, category: "boost", health_gain: 150, times_purchased: 0, is_consumable: true, created_date: new Date().toISOString() },
         { id: generateId(), name: "Poção Premium", description: "Restaura +500 HP", icon: "💎", price: 300, category: "boost", health_gain: 500, times_purchased: 0, is_consumable: true, created_date: new Date().toISOString() },
@@ -79,15 +126,31 @@ export const initializeDefaultData = () => {
         { id: generateId(), name: "Dia de Folga", description: "Um dia sem obrigações para relaxar", icon: "🏖️", price: 200, category: "recompensa", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Jogo Novo", description: "Comprar aquele jogo que você queria", icon: "🎮", price: 300, category: "recompensa", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Boost de EXP 2x", description: "Próximo hábito vale EXP em dobro", icon: "⚡", price: 100, category: "boost", times_purchased: 0, is_consumable: true, current_uses: 1, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Escudo de Resiliência", description: "Reduz dano de hábitos ruins em 20%", icon: "🛡️", price: 500, category: "especial", reduction_penalty: 0.2, times_purchased: 0, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Anel do Foco", description: "Bônus fixo de +10% EXP em todos os hábitos", icon: "💍", price: 400, category: "especial", bonus_exp: 0.1, times_purchased: 0, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Espada da Disciplina", description: "Causa +20% de dano aos Bosses", icon: "⚔️", price: 600, category: "especial", times_purchased: 0, created_date: new Date().toISOString() },
         { id: generateId(), name: "Café Expresso", description: "+20% Dano Boss (3 usos)", icon: "☕", price: 50, category: "boost", max_uses: 3, current_uses: 3, is_consumable: true, created_date: new Date().toISOString() },
         { id: generateId(), name: "Poção de Claridade", description: "Remove todos os debuffs negativos", icon: "✨", price: 80, category: "consumivel", is_consumable: true, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Amuleto Barato", description: "+5% EXP (Frágil: 10 usos)", icon: "🧿", price: 100, category: "especial", bonus_exp: 0.05, max_uses: 10, current_uses: 10, created_date: new Date().toISOString() },
         { id: generateId(), name: "Elixir de Vitalidade", description: "Restaura 300 HP e limpa Cansaço", icon: "🧪", price: 250, category: "boost", health_gain: 300, is_consumable: true, created_date: new Date().toISOString() },
         { id: generateId(), name: "Pergaminho do Aprendiz", description: "+15% EXP em Estudos (1 uso)", icon: "📜", price: 120, category: "boost", bonus_exp: 0.15, is_consumable: true, current_uses: 1, created_date: new Date().toISOString() },
         { id: generateId(), name: "Poção de Regeneração", description: "Regenera 10 HP por minuto (30 min)", icon: "🧪", price: 150, category: "boost", is_consumable: true, created_date: new Date().toISOString() },
+
+        // WEAPONS (MainHand / OffHand)
+        { id: generateId(), name: "Faca de Iniciante", description: "+5 Dano. Uma lâmina simples para começar.", icon: "🗡️", price: 150, category: "equipment", slot: "main_hand", damage: 5, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Espada Longa", description: "+15 Dano. Arma balanceada para guerreiros.", icon: "⚔️", price: 500, category: "equipment", slot: "main_hand", damage: 15, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Adaga Sombria", description: "+10 Dano, +5% Crítico.", icon: "🌑", price: 450, category: "equipment", slot: "main_hand", damage: 10, crit_chance: 0.05, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Cajado do Sábio", description: "+20% EXP em Estudo.", icon: "🔮", price: 800, category: "equipment", slot: "main_hand", exp_bonus: 0.20, exp_category: "estudo", times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Varinha Mágica", description: "+10% EXP Geral.", icon: "🪄", price: 600, category: "equipment", slot: "main_hand", exp_bonus: 0.10, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Arco do Caçador", description: "+12 Dano. Bom para alvos distantes.", icon: "🏹", price: 550, category: "equipment", slot: "main_hand", damage: 12, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Escudo de Madeira", description: "+10 HP.", icon: "🛡️", price: 200, category: "equipment", slot: "off_hand", health_bonus: 10, times_purchased: 0, created_date: new Date().toISOString() },
+
+        // ARMOR (Head, Body, Legs, Feet)
+        { id: generateId(), name: "Capacete de Ferro", description: "+20 HP.", icon: "🪖", price: 300, category: "equipment", slot: "head", health_bonus: 20, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Peitoral de Couro", description: "+30 HP.", icon: "🧥", price: 400, category: "equipment", slot: "body", health_bonus: 30, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Armadura da Resiliência", description: "Reduz penalidades de hábitos ruins em 20%.", icon: "🛡️", price: 1000, category: "equipment", slot: "body", reduction_penalty: 0.2, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Calças de Tecido", description: "+10 HP. Leves e confortáveis.", icon: "👖", price: 150, category: "equipment", slot: "legs", health_bonus: 10, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Botas de Velocidade", description: "+5% EXP em Esportes.", icon: "👢", price: 350, category: "equipment", slot: "feet", exp_bonus: 0.05, exp_category: "saude", times_purchased: 0, created_date: new Date().toISOString() },
+
+        // ACCESSORIES (Finger, Neck)
+        { id: generateId(), name: "Anel do Foco", description: "+10% EXP em todos os hábitos.", icon: "💍", price: 1500, category: "equipment", slot: "ring", bonus_exp: 0.1, times_purchased: 0, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Amuleto da Riqueza", description: "+10% Ouro em todos os hábitos.", icon: "🧿", price: 1200, category: "equipment", slot: "neck", bonus_gold: 0.1, times_purchased: 0, created_date: new Date().toISOString() },
       ],
     };
 
@@ -112,11 +175,9 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.CHARACTER, JSON.stringify(newCharacter));
     return newCharacter;
   },
-  updateCharacter: async (updates) => {
-    const current = await storage.getCharacter();
-    const updated = { ...current, ...updates, updated_date: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEYS.CHARACTER, JSON.stringify(updated));
-    window.dispatchEvent(new Event('levelup_data_update'));
+  updateCharacter: async (updates: any) => {
+    // We use the centralized characterService for leveling logic
+    const updated = characterService.updateCharacter(updates);
     return updated;
   },
   getInventory: async () => {
@@ -125,10 +186,27 @@ export const storage = {
   },
   toggleEquip: async (itemId: string) => {
     const character = await storage.getCharacter();
-    const inventory = (character.inventory || []).map((item: any) => {
-      if (item.id === itemId) return { ...item, is_equipped: !item.is_equipped };
-      return item;
-    });
+    const inventory = [...(character.inventory || [])];
+    const targetItemIndex = inventory.findIndex((i: any) => i.id === itemId);
+
+    if (targetItemIndex === -1) return character;
+
+    const targetItem = inventory[targetItemIndex];
+    const isEquipping = !targetItem.is_equipped;
+
+    // If equipping, check for slot conflicts
+    if (isEquipping && targetItem.slot) {
+      // Unequip any other item in the same slot
+      inventory.forEach((item, index) => {
+        if (item.is_equipped && item.slot === targetItem.slot && item.id !== itemId) {
+          inventory[index] = { ...item, is_equipped: false };
+        }
+      });
+    }
+
+    // Toggle the target item
+    inventory[targetItemIndex] = { ...targetItem, is_equipped: isEquipping };
+
     return storage.updateCharacter({ inventory });
   },
   useItem: async (itemId: string) => {
@@ -308,9 +386,42 @@ export const storage = {
   },
 
   getMarketItems: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.MARKET_ITEMS);
-    return data ? JSON.parse(data) : [];
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const lastUpdate = localStorage.getItem('levelup_shop_date');
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEYS.MARKET_ITEMS) || '[]');
+
+    if (lastUpdate !== today || items.length === 0) {
+      // GENERATE DAILY SHOP
+      const dailySelection = [];
+      const pool = [...ROTATING_MARKET_POOL];
+
+      // Select 6 random items from pool
+      for (let i = 0; i < 6; i++) {
+        if (pool.length === 0) break;
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        const item = pool.splice(randomIndex, 1)[0];
+        dailySelection.push({
+          ...item,
+          id: generateId(),
+          created_date: new Date().toISOString()
+        });
+      }
+
+      // Add permanent items
+      const permanentItems = PERMANENT_MARKET_ITEMS.map(item => ({
+        ...item,
+        id: generateId(),
+        created_date: new Date().toISOString()
+      }));
+
+      items = [...permanentItems, ...dailySelection];
+      localStorage.setItem(STORAGE_KEYS.MARKET_ITEMS, JSON.stringify(items));
+      localStorage.setItem('levelup_shop_date', today);
+    }
+
+    return items;
   },
+
   addMarketItem: async (item) => {
     const items = await storage.getMarketItems();
     const newItem = { ...item, id: generateId(), created_date: new Date().toISOString() };
@@ -318,6 +429,9 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.MARKET_ITEMS, JSON.stringify(items));
     return newItem;
   },
+
+  // ... (rest of methods)
+
   updateMarketItem: async (id, updates) => {
     const items = await storage.getMarketItems();
     const index = items.findIndex(i => i.id === id);

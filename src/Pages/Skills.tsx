@@ -10,13 +10,17 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { storage } from '@/components/storage/LocalStorage';
+import { perkService, Perk } from '@/services/perkService';
 import { Skill, Objective } from '@/types';
 import RadarChart from '@/components/ui/RadarChart';
+import { Lock, Unlock } from 'lucide-react';
 
 export default function Skills() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [perks, setPerks] = useState<Perk[]>([]);
+  const [unlockedPerks, setUnlockedPerks] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState({
     name: '',
     category: 'estudo',
@@ -33,6 +37,8 @@ export default function Skills() {
       const objectivesData = await storage.getObjectives();
       setSkills(skillsData);
       setObjectives(objectivesData);
+      setPerks(perkService.getAllPerks());
+      setUnlockedPerks(perkService.getUnlockedPerks());
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -198,6 +204,37 @@ export default function Skills() {
             </div>
           </motion.div>
         )}
+
+        {/* Perk Tree Section */}
+        <div className="mb-12">
+          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <span className="text-yellow-400">⚡</span> Árvore de Perks
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {perks.map((perk) => {
+              const isUnlocked = unlockedPerks.includes(perk.id);
+              return (
+                <div
+                  key={perk.id}
+                  className={`relative p-4 rounded-xl border transition-all ${isUnlocked
+                      ? 'bg-slate-900 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
+                      : 'bg-slate-900/50 border-slate-800 opacity-60 grayscale'
+                    }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="text-2xl">{perk.icon}</div>
+                    {isUnlocked ? <Unlock className="w-4 h-4 text-yellow-400" /> : <Lock className="w-4 h-4 text-slate-500" />}
+                  </div>
+                  <h3 className={`font-bold ${isUnlocked ? 'text-white' : 'text-slate-400'}`}>{perk.name}</h3>
+                  <p className="text-xs text-slate-400 mb-2">{perk.description}</p>
+                  <div className="text-xs font-mono uppercase tracking-wider text-slate-500">
+                    Req: {perk.skill_category} Nv. {perk.required_level}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Skills Grid */}
         {Object.entries(categoryLabels).map(([category, label]) => {

@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { storage } from '@/components/storage/LocalStorage';
 import { toast } from "sonner";
 import { Character } from '@/types';
+import { themeService } from '@/services/themeService';
+import { Check } from 'lucide-react';
 
 export default function CharacterSettings() {
   const [isLoading, setIsLoading] = useState(false);
@@ -241,6 +243,58 @@ export default function CharacterSettings() {
               </div>
             </CardContent>
           </Card>
+
+
+          {/* THEMES SECTION */}
+          <div className="bg-slate-900/50 border-slate-700 p-4 rounded-xl border mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold text-white">Temas Visuais</h3>
+              <span className="text-xs bg-yellow-500 text-black px-2 rounded-full font-bold">NOVO</span>
+            </div>
+            <p className="text-sm text-slate-400 mb-6">Personalize a aparência do sistema. Colecione todos!</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+              {themeService.availableThemes.map(theme => {
+                const owned = themeService.getOwnedThemes().includes(theme.id);
+                const isCurrent = themeService.getCurrentTheme() === theme.id;
+
+                return (
+                  <div key={theme.id} className={`p-4 rounded-xl border flex flex-col justify-between ${isCurrent ? 'bg-slate-800 border-cyan-500' : 'bg-slate-950 border-slate-700'}`}>
+                    <div>
+                      <div className="w-full h-16 rounded-lg mb-4 shadow-inner" style={{ backgroundColor: theme.previewColor }}></div>
+                      <h4 className="font-bold text-white">{theme.name}</h4>
+                      <p className="text-xs text-slate-400 mb-4">{theme.description}</p>
+                    </div>
+
+                    {isCurrent ? (
+                      <Button disabled className="w-full bg-slate-700 text-white"><Check className="w-4 h-4 mr-2" /> Equipado</Button>
+                    ) : owned ? (
+                      <Button onClick={() => { themeService.setTheme(theme.id); loadCharacter(); }} variant="outline" className="border-slate-600 hover:bg-slate-800 w-full">Equipar</Button>
+                    ) : (
+                      <Button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          const char = await storage.getCharacter();
+                          if (char.gold >= theme.price) {
+                            await storage.updateCharacter({ gold: char.gold - theme.price });
+                            themeService.buyTheme(theme.id);
+                            themeService.setTheme(theme.id);
+                            toast.success(`Tema ${theme.name} comprado!`);
+                            loadCharacter();
+                          } else {
+                            toast.error("Ouro insuficiente!");
+                          }
+                        }}
+                        className="w-full bg-yellow-600 hover:bg-yellow-500 text-white"
+                      >
+                        Comprar ({theme.price} 💰)
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Notifications Section */}
           <Card className="bg-slate-900/50 border-slate-700">

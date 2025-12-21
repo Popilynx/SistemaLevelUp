@@ -4,6 +4,7 @@ import { Plus, Target, Swords, BookOpen, Scroll, Settings, ShoppingBag, Activity
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { storage } from '@/components/storage/LocalStorage';
+import { combatService } from '@/services/combatService';
 import CharacterCard from '@/components/character/CharacterCard';
 import DailyBossCard from '@/components/character/DailyBossCard';
 import { ComboCounter, ParticleExplosion } from '@/components/ui/VisualJuice';
@@ -13,6 +14,8 @@ import ObjectiveCard from '@/components/objectives/ObjectiveCard';
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
+import { questService } from '@/services/questService';
 
 export default function Home() {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -33,7 +36,7 @@ export default function Home() {
       storage.getBadHabits(),
       storage.getObjectives(),
       storage.getDailyChecks(today),
-      storage.getDailyBoss(),
+      combatService.getDailyBoss(),
     ]);
     setCharacter(char);
     setGoodHabits(gHabits);
@@ -125,6 +128,11 @@ export default function Home() {
     const goldGain = Math.floor((habit.gold_reward || 5) * goldDebuffMult);
     const newStreak = (habit.streak || 0) + 1;
 
+    // Quest Updates
+    const habitCategory = habit.skill_category || habit.category;
+    questService.updateProgress('habit_count', 1, habitCategory);
+    questService.updateProgress('earn_gold', goldGain);
+
     await storage.addDailyCheck({
       habit_id: habit.id,
       habit_type: 'good',
@@ -137,21 +145,14 @@ export default function Home() {
       best_streak: Math.max(newStreak, habit.best_streak || 0),
     });
 
-    const newExp = (character.current_exp || 0) + expGain;
-    const expForNextLevel = (character.level || 1) * 500;
-    let newLevel = character.level || 1;
-    let remainingExp = newExp;
-
-    if (newExp >= expForNextLevel) {
-      newLevel += 1;
-      remainingExp = newExp - expForNextLevel;
-    }
+    const updatedExp = (character.current_exp || 0) + expGain;
+    const updatedTotalExp = (character.total_exp || 0) + expGain;
+    const updatedGold = (character.gold || 0) + goldGain;
 
     await storage.updateCharacter({
-      current_exp: remainingExp,
-      total_exp: (character.total_exp || 0) + expGain,
-      gold: (character.gold || 0) + goldGain,
-      level: newLevel,
+      current_exp: updatedExp,
+      total_exp: updatedTotalExp,
+      gold: updatedGold,
     });
 
     await storage.addActivityLog({
@@ -179,18 +180,36 @@ export default function Home() {
       const damageDebuffMult = debuffs.some((d: any) => d.type === 'confused') ? 0.7 : 1.0;
 
       const damage = Math.floor(expGain * 15 * (1 + bonusBossDamage) * damageBuffMult * damageDebuffMult);
-      const newBossHealth = Math.max(dailyBoss.health - damage, 0);
+
+      // FIX: Access stats.health instead of health directly
+      const currentHealth = dailyBoss.stats?.health ?? 0;
+      const newBossHealth = Math.max(currentHealth - damage, 0);
       const isDefeated = newBossHealth === 0;
 
-      const bossUpdates: any = { health: newBossHealth };
+      const bossUpdates: any = {
+        stats: {
+          ...dailyBoss.stats,
+          health: newBossHealth
+        }
+      };
       if (isDefeated) {
         bossUpdates.status = 'defeated';
+
+        // Quest Update for Boss Defeat
+        questService.updateProgress('boss_damage', damage);
+
         // Award boss rewards
+        const bossGold = dailyBoss.rewards?.gold || dailyBoss.base_gold_reward || 0;
+        const bossExp = dailyBoss.rewards?.exp || dailyBoss.base_exp_reward || 0;
+
         await storage.updateCharacter({
-          gold: (character.gold || 0) + goldGain + dailyBoss.base_gold_reward,
-          total_exp: (character.total_exp || 0) + expGain + dailyBoss.base_exp_reward,
-          current_exp: remainingExp + dailyBoss.base_exp_reward, // Note: Simplified level up here
+          gold: (character.gold || 0) + goldGain + bossGold,
+          total_exp: (character.total_exp || 0) + expGain + bossExp,
+          current_exp: (character.current_exp || 0) + expGain + bossExp,
         });
+
+        // Quest Update for Boss Gold
+        questService.updateProgress('earn_gold', bossGold);
 
         await storage.addActivityLog({
           activity: `DERROTOU O BOSS: ${dailyBoss.name}!`,
@@ -200,6 +219,9 @@ export default function Home() {
         });
 
         toast.success(`💥 VOCÊ DERROTOU ${dailyBoss.name.toUpperCase()}!`);
+      } else {
+        // Just damage update
+        questService.updateProgress('boss_damage', damage);
       }
 
       await storage.updateDailyBoss(bossUpdates);
@@ -275,9 +297,17 @@ export default function Home() {
 
     await storage.updateObjective(objective.id, { status: 'concluido', progress: 100 });
 
+    // Quest Update
+    questService.updateProgress('earn_gold', goldGain);
+
+    const updatedExp = (character.current_exp || 0) + expGain;
+    const updatedTotalExp = (character.total_exp || 0) + expGain;
+    const updatedGold = (character.gold || 0) + goldGain;
+
     await storage.updateCharacter({
-      current_exp: (character.current_exp || 0) + expGain,
-      gold: (character.gold || 0) + goldGain,
+      current_exp: updatedExp,
+      total_exp: updatedTotalExp,
+      gold: updatedGold
     });
 
     await storage.addActivityLog({
@@ -303,6 +333,7 @@ export default function Home() {
     { icon: Scroll, label: 'Habilidades', page: 'Skills', color: 'text-purple-400' },
     { icon: ShoppingBag, label: 'Mercado', page: 'Market', color: 'text-yellow-400' },
     { icon: Package, label: 'Inventário', page: 'Inventory', color: 'text-orange-400' },
+    { icon: Scroll, label: 'Missões', page: 'Quests', color: 'text-pink-400' },
     { icon: Activity, label: 'Atividade', page: 'ActivityLog', color: 'text-blue-400' },
   ];
 
@@ -345,7 +376,11 @@ export default function Home() {
           {/* Character and Boss Section */}
           <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CharacterCard character={character} />
-            <DailyBossCard boss={dailyBoss} isDefeated={dailyBoss?.status === 'defeated'} />
+            <Link to="/boss-arena">
+              <div className="transform transition-transform hover:scale-[1.02] cursor-pointer">
+                <DailyBossCard boss={dailyBoss} isDefeated={dailyBoss?.status === 'defeated'} />
+              </div>
+            </Link>
           </div>
         </div>
       </div>
@@ -408,95 +443,105 @@ export default function Home() {
           </motion.div>
         )}
 
-        {/* Daily Evolution Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Good Habits */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900/50 rounded-2xl border border-slate-700/50 p-5"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Target className="w-4 h-4 text-green-400" />
-                </div>
-                <h2 className="font-bold text-white">Evolução Diária</h2>
+        {/* Quests Section */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <Link to="/quests">
+            <div className="h-full p-6 rounded-2xl bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 hover:border-indigo-500/50 transition-all cursor-pointer flex flex-col justify-center items-center gap-2 group">
+              <div className="p-3 rounded-full bg-indigo-500/20 group-hover:scale-110 transition-transform">
+                <Scroll className="w-8 h-8 text-indigo-400" />
               </div>
-              <Link to={createPageUrl('GoodHabits')}>
-                <Button size="sm" variant="ghost" className="text-cyan-400 hover:text-cyan-300">
-                  <Plus className="w-4 h-4 mr-1" /> Adicionar
-                </Button>
-              </Link>
+              <h3 className="text-xl font-bold text-white">Mural de Missões</h3>
+              <p className="text-sm text-indigo-300">Ganhe recompensas extras</p>
             </div>
-
-            <div className="space-y-3">
-              <AnimatePresence>
-                {goodHabits.map((habit) => (
-                  <GoodHabitCard
-                    key={habit.id}
-                    habit={habit}
-                    isCompleted={isHabitCompletedToday(habit.id, 'good')}
-                    onComplete={handleCompleteGoodHabit}
-                  />
-                ))}
-              </AnimatePresence>
-              {goodHabits.length === 0 && (
-                <p className="text-center text-slate-500 py-8">
-                  Nenhum hábito cadastrado ainda
-                </p>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Bad Habits */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900/50 rounded-2xl border border-slate-700/50 p-5"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <Swords className="w-4 h-4 text-red-400" />
-                </div>
-                <h2 className="font-bold text-white">Batalhas</h2>
-              </div>
-              <Link to={createPageUrl('BadHabits')}>
-                <Button size="sm" variant="ghost" className="text-cyan-400 hover:text-cyan-300">
-                  <Plus className="w-4 h-4 mr-1" /> Adicionar
-                </Button>
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              <AnimatePresence>
-                {badHabits.map((habit) => (
-                  <BadHabitCard
-                    key={habit.id}
-                    habit={habit}
-                    onFail={handleBadHabitFail}
-                  />
-                ))}
-              </AnimatePresence>
-              {badHabits.length === 0 && (
-                <p className="text-center text-slate-500 py-8">
-                  Nenhuma batalha cadastrada ainda
-                </p>
-              )}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Settings Link */}
-        <div className="mt-8 text-center">
-          <Link to={createPageUrl('CharacterSettings')}>
-            <Button variant="outline" className="border-slate-700 text-slate-400 hover:text-white hover:border-cyan-500">
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações do Personagem
-            </Button>
           </Link>
         </div>
+
+        {/* Daily Evolution Section */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-slate-900/50 rounded-2xl border border-slate-700/50 p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Target className="w-4 h-4 text-green-400" />
+              </div>
+              <h2 className="font-bold text-white">Evolução Diária</h2>
+            </div>
+            <Link to={createPageUrl('GoodHabits')}>
+              <Button size="sm" variant="ghost" className="text-cyan-400 hover:text-cyan-300">
+                <Plus className="w-4 h-4 mr-1" /> Adicionar
+              </Button>
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            <AnimatePresence>
+              {goodHabits.map((habit) => (
+                <GoodHabitCard
+                  key={habit.id}
+                  habit={habit}
+                  isCompleted={isHabitCompletedToday(habit.id, 'good')}
+                  onComplete={handleCompleteGoodHabit}
+                />
+              ))}
+            </AnimatePresence>
+            {goodHabits.length === 0 && (
+              <p className="text-center text-slate-500 py-8">
+                Nenhum hábito cadastrado ainda
+              </p>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Bad Habits */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-slate-900/50 rounded-2xl border border-slate-700/50 p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <Swords className="w-4 h-4 text-red-400" />
+              </div>
+              <h2 className="font-bold text-white">Batalhas</h2>
+            </div>
+            <Link to={createPageUrl('BadHabits')}>
+              <Button size="sm" variant="ghost" className="text-cyan-400 hover:text-cyan-300">
+                <Plus className="w-4 h-4 mr-1" /> Adicionar
+              </Button>
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            <AnimatePresence>
+              {badHabits.map((habit) => (
+                <BadHabitCard
+                  key={habit.id}
+                  habit={habit}
+                  onFail={handleBadHabitFail}
+                />
+              ))}
+            </AnimatePresence>
+            {badHabits.length === 0 && (
+              <p className="text-center text-slate-500 py-8">
+                Nenhuma batalha cadastrada ainda
+              </p>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Settings Link */}
+      <div className="mt-8 text-center">
+        <Link to={createPageUrl('CharacterSettings')}>
+          <Button variant="outline" className="border-slate-700 text-slate-400 hover:text-white hover:border-cyan-500">
+            <Settings className="w-4 h-4 mr-2" />
+            Configurações do Personagem
+          </Button>
+        </Link>
       </div>
     </div>
   );

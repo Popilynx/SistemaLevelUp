@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ArrowLeft, Trash2, Coins, Package } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Coins, Package, Clock, RefreshCw } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -12,6 +12,7 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { storage } from '@/components/storage/LocalStorage';
+import { marketService } from '@/services/marketService'; // NEW SERVICE
 import { toast } from "sonner";
 
 export default function Market() {
@@ -21,6 +22,7 @@ export default function Market() {
   const [loading, setLoading] = useState(true);
   const [missedHabits, setMissedHabits] = useState<any[]>([]);
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -31,13 +33,19 @@ export default function Market() {
 
   useEffect(() => {
     loadData();
+
+    // Timer Interval
+    const timer = setInterval(() => {
+      setTimeLeft(marketService.getTimeUntilReset());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const loadData = async () => {
-    const [items, char] = await Promise.all([
-      storage.getMarketItems(),
-      storage.getCharacter(),
-    ]);
+    const items = marketService.getMarketItems();
+    const char = await storage.getCharacter();
+
     setMarketItems(items);
     setCharacter(char);
     setLoading(false);
@@ -93,7 +101,7 @@ export default function Market() {
     const updatedChar = { ...character, gold: character.gold - item.price };
 
     // --- INVENTORY & EQUIPMENT LOGIC ---
-    const isPermanent = item.category === 'especial' || item.category === 'cosmetic';
+    const isPermanent = item.category === 'especial' || item.category === 'cosmetic' || item.category === 'equipment';
     const isConsumable = item.category === 'boost' || item.category === 'consumivel' || item.is_consumable;
 
     const needsInventory = isPermanent || isConsumable;
@@ -101,8 +109,8 @@ export default function Market() {
     if (needsInventory) {
       const inventory = [...(updatedChar.inventory || [])];
 
-      // Check for duplicates of permanent items
-      if (isPermanent && inventory.find((i: any) => i.name === item.name)) {
+      // Check for duplicates of permanent items (only for unique ones like 'especial')
+      if (item.category === 'especial' && inventory.find((i: any) => i.name === item.name)) {
         toast.error('Você já possui este item permanente!');
         return;
       }
@@ -110,7 +118,8 @@ export default function Market() {
       const newItemEntry = {
         ...item,
         id: `${item.id}_${Date.now()}`, // unique instance ID for inventory
-        is_equipped: isPermanent,
+        is_equipped: false, // Default to not equipped for new items
+        is_consumable: item.category === 'boost' || item.category === 'consumivel' || item.is_consumable,
         current_uses: item.current_uses ?? (isConsumable ? 1 : undefined)
       };
 
@@ -131,9 +140,9 @@ export default function Market() {
 
     await storage.updateCharacter(updatedChar);
 
-    await storage.updateMarketItem(item.id, {
-      ...item,
-      times_purchased: (item.times_purchased || 0) + 1,
+    // Use marketService helper to update item stats (times purchased)
+    marketService.updateItem(item.id, {
+      times_purchased: (item.times_purchased || 0) + 1
     });
 
     await storage.addActivityLog({
@@ -212,13 +221,17 @@ export default function Market() {
   }, {});
 
   const categoryLabels = {
-    recompensa: { label: '🎁 Recompensas', color: 'text-purple-400' },
+    equipment: { label: '⚔️ Arsenal Rotativo (Guerreiro, Mago, etc.)', color: 'text-blue-400' },
     boost: { label: '🧪 Poções e Boosts', color: 'text-cyan-400' },
     consumivel: { label: '🧼 Consumíveis', color: 'text-emerald-400' },
     mercado_negro: { label: '💀 Mercado Negro', color: 'text-red-400' },
+    recompensa: { label: '🎁 Recompensas Pessoais', color: 'text-purple-400' },
     cosmetic: { label: '✨ Cosméticos', color: 'text-amber-400' },
-    especial: { label: '💎 Especiais', color: 'text-orange-400' },
+    especial: { label: '💎 Itens Especiais', color: 'text-orange-400' },
   };
+
+  // Custom sorting to put Equipment FIRST
+  const sortedCategories = ['equipment', 'boost', 'mercado_negro', 'consumivel', 'recompensa', 'especial', 'cosmetic'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
@@ -238,28 +251,39 @@ export default function Market() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-white">Mercado Negro</h1>
-              <p className="text-slate-400 text-sm">Troque suas moedas por recompensas</p>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                Mercado Negro <span className="text-xs font-normal px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">Nível 1</span>
+              </h1>
+              <div className="flex items-center gap-2 text-slate-400 text-sm mt-1">
+                <Clock className="w-4 h-4 text-cyan-400" />
+                <span>Renova em: </span>
+                <span className="font-mono text-cyan-300 font-bold bg-slate-800 px-2 rounded">
+                  {timeLeft.hours.toString().padStart(2, '0')}:
+                  {timeLeft.minutes.toString().padStart(2, '0')}:
+                  {timeLeft.seconds.toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-2">
               <Coins className="w-5 h-5 text-yellow-400" />
-              <span className="font-bold text-yellow-400">{character?.gold || 0}</span>
+              <span className="font-bold text-yellow-400 text-xl">{character?.gold || 0}</span>
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-slate-900">
-                  <Plus className="w-4 h-4 mr-2" /> Novo Item
+                <Button className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-slate-900 font-bold">
+                  <Plus className="w-4 h-4 mr-2" /> Vender / Criar
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-slate-900 border-slate-700">
                 <DialogHeader>
-                  <DialogTitle className="text-white">Adicionar Item ao Mercado</DialogTitle>
+                  <DialogTitle className="text-white">Adicionar Item Personalizado</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
+                  {/* ... Existing Creation Form ... */}
                   <div className="space-y-2">
                     <Label className="text-slate-300">Nome do Item</Label>
                     <Input
@@ -278,24 +302,6 @@ export default function Market() {
                       placeholder="Descreva a recompensa..."
                       className="bg-slate-800 border-slate-700 text-white"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Ícone</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {emojiOptions.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => setNewItem({ ...newItem, icon: emoji })}
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${newItem.icon === emoji
-                            ? 'bg-yellow-500/30 border-2 border-yellow-500'
-                            : 'bg-slate-800 border border-slate-700 hover:border-slate-500'
-                            }`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -317,9 +323,6 @@ export default function Market() {
                         <SelectItem value="recompensa">🎁 Recompensa</SelectItem>
                         <SelectItem value="boost">🧪 Boost/Poção</SelectItem>
                         <SelectItem value="consumivel">🧼 Consumível</SelectItem>
-                        <SelectItem value="mercado_negro">💀 Mercado Negro</SelectItem>
-                        <SelectItem value="cosmetic">✨ Cosmético</SelectItem>
-                        <SelectItem value="especial">💎 Especial</SelectItem>
                       </Select>
                     </div>
                   </div>
@@ -363,44 +366,59 @@ export default function Market() {
         </Dialog>
 
         {/* Items by Category */}
-        {Object.entries(categoryLabels).map(([category, { label, color }]) => {
-          const categoryItems = itemsByCategory[category] || [];
-          if (categoryItems.length === 0) return null;
+        <div className="space-y-12">
+          {sortedCategories.map((category) => {
+            const categoryItems = itemsByCategory[category] || [];
+            if (categoryItems.length === 0) return null;
 
-          return (
-            <div key={category} className="mb-8">
-              <h2 className={`text-lg font-semibold mb-4 ${color}`}>{label}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <AnimatePresence>
-                  {categoryItems.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="relative group"
-                    >
-                      <MarketItemCard
-                        item={item}
-                        userGold={character?.gold || 0}
-                        onPurchase={handlePurchase}
-                      />
-                      <Button
-                        onClick={() => handleDeleteItem(item.id)}
-                        size="icon"
-                        variant="ghost"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-500/20"
+            const { label, color } = categoryLabels[category as keyof typeof categoryLabels] || { label: category, color: 'text-white' };
+
+            return (
+              <div key={category} className="relative">
+                <div className="flex items-center gap-3 mb-6 border-b border-slate-800 pb-2">
+                  <h2 className={`text-2xl font-bold ${color}`}>{label}</h2>
+                  {category === 'equipment' && (
+                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded border border-slate-700">
+                      Rotação Diária
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AnimatePresence mode='popLayout'>
+                    {categoryItems.map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="relative group h-full"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                        <MarketItemCard
+                          item={item}
+                          userGold={character?.gold || 0}
+                          onPurchase={handlePurchase}
+                        />
+                        {/* Only showing delete for custom items (optional logic, kept simple for now) */}
+                        {!item.class && (
+                          <Button
+                            onClick={() => handleDeleteItem(item.id)}
+                            size="icon"
+                            variant="ghost"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
         {marketItems.length === 0 && (
           <motion.div
