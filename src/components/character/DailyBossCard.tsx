@@ -18,10 +18,10 @@ export default function DailyBossCard({ boss, isDefeated }: DailyBossCardProps) 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-                "relative overflow-hidden rounded-2xl border p-6 transition-all duration-500",
+                "relative overflow-hidden rounded-[2rem] border p-8 transition-all duration-500 backdrop-blur-xl",
                 isDefeated
-                    ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
-                    : "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+                    ? "bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/40 shadow-[0_0_40px_rgba(234,179,8,0.1)]"
+                    : "bg-slate-900/40 border-slate-800/60 shadow-[0_0_30px_rgba(0,0,0,0.3)] hover:border-red-500/30"
             )}
         >
             <div className="flex items-center justify-between mb-4">
@@ -39,7 +39,23 @@ export default function DailyBossCard({ boss, isDefeated }: DailyBossCardProps) 
                         )}>
                             {isDefeated ? 'BOSS DERROTADO!' : boss.name}
                         </h2>
-                        <p className="text-slate-400 text-xs font-medium">BOSS DO DIA</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">BOSS DO DIA</p>
+                            {boss.element && boss.element !== 'neutral' && (
+                                <span className={cn(
+                                    "text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase",
+                                    boss.element === 'fire' && "bg-orange-500/20 text-orange-400",
+                                    boss.element === 'water' && "bg-blue-500/20 text-blue-400",
+                                    boss.element === 'earth' && "bg-emerald-500/20 text-emerald-400",
+                                    boss.element === 'air' && "bg-cyan-500/20 text-cyan-400",
+                                )}>
+                                    {boss.element === 'fire' && '🔥 FOGO'}
+                                    {boss.element === 'water' && '💧 ÁGUA'}
+                                    {boss.element === 'earth' && '🌿 TERRA'}
+                                    {boss.element === 'air' && '🌪️ AR'}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 {isDefeated && (
@@ -81,9 +97,9 @@ export default function DailyBossCard({ boss, isDefeated }: DailyBossCardProps) 
                         <Swords className="w-3 h-3 text-red-500" />
                         Complete hábitos para atacar!
                     </div>
-                    <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1">💰 {boss.base_gold_reward}</span>
-                        <span className="flex items-center gap-1">✨ {boss.base_exp_reward}</span>
+                    <div className="flex items-center gap-3 font-mono font-bold">
+                        <span className="flex items-center gap-1 text-yellow-500">💰 {boss.rewards?.gold || boss.base_gold_reward}</span>
+                        <span className="flex items-center gap-1 text-cyan-400">✨ {boss.rewards?.exp || boss.base_exp_reward}</span>
                     </div>
                 </div>
             )}

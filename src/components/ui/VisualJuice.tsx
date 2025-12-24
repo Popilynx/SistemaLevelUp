@@ -38,6 +38,79 @@ export function ComboCounter({ combo }: ComboCounterProps) {
     );
 }
 
+
+export function LevelUpCelebration({ level }: { level: number }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md"
+        >
+            <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", damping: 12 }}
+                className="text-center"
+            >
+                <motion.div
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="text-8xl mb-4"
+                >
+                    🌟
+                </motion.div>
+                <h2 className="text-6xl font-black text-white mb-2 tracking-tighter drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]">
+                    LEVEL UP!
+                </h2>
+                <p className="text-2xl font-bold text-cyan-400 uppercase tracking-[0.2em]">
+                    Você alcançou o Nível {level}
+                </p>
+
+                <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="mt-8 text-slate-400 animate-pulse"
+                >
+                    Clique em qualquer lugar para continuar
+                </motion.div>
+            </motion.div>
+
+            {/* Background Confetti (Simple) */}
+            {[...Array(30)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    initial={{
+                        x: "50%",
+                        y: "50%",
+                        scale: 0
+                    }}
+                    animate={{
+                        x: `${Math.random() * 100}%`,
+                        y: `${Math.random() * 100}%`,
+                        scale: Math.random() * 2 + 1,
+                        rotate: Math.random() * 360,
+                        opacity: [1, 0]
+                    }}
+                    transition={{
+                        duration: 2,
+                        delay: Math.random() * 0.5,
+                        repeat: Infinity
+                    }}
+                    className="absolute w-4 h-4 rounded-sm bg-cyan-500"
+                    style={{
+                        backgroundColor: i % 3 === 0 ? '#22d3ee' : i % 3 === 1 ? '#818cf8' : '#fbbf24'
+                    }}
+                />
+            ))}
+        </motion.div>
+    );
+}
+
 export function ParticleExplosion({ x, y }: { x: number, y: number }) {
     return (
         <div className="fixed inset-0 pointer-events-none z-[100]">

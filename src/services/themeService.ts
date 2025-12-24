@@ -1,54 +1,145 @@
-export const THEMES = {
-    DEFAULT: 'theme-default',
-    CYBERPUNK: 'theme-cyberpunk',
-    MEDIEVAL: 'theme-medieval',
-    MINIMALIST: 'theme-minimalist',
-};
+import { storage } from "@/components/storage/LocalStorage";
+
+export type ThemeType = 'default' | 'cyberpunk' | 'medieval' | 'zen' | 'void';
 
 export interface Theme {
-    id: string;
+    id: ThemeType;
     name: string;
     description: string;
     price: number;
     previewColor: string;
-    is_owned: boolean;
+    colors: {
+        primary: string;
+        secondary: string;
+        accent: string;
+        background: string;
+        card: string;
+    };
 }
 
-const STORAGE_KEY_THEME = 'levelup_current_theme';
-const STORAGE_KEY_OWNED = 'levelup_owned_themes';
+class ThemeService {
+    private THEMES: Record<ThemeType, Theme> = {
+        default: {
+            id: 'default',
+            name: 'Padrão (Hero)',
+            description: 'O visual clássico do caçador de elite.',
+            price: 0,
+            previewColor: '#ef4444',
+            colors: {
+                primary: '#ef4444',
+                secondary: '#0f172a',
+                accent: '#3b82f6',
+                background: '#020617',
+                card: '#0f172a'
+            }
+        },
+        cyberpunk: {
+            id: 'cyberpunk',
+            name: 'Cyberpunk 2077',
+            description: 'Neon, cromo e alta tecnologia.',
+            price: 1500,
+            previewColor: '#facc15',
+            colors: {
+                primary: '#facc15',
+                secondary: '#000000',
+                accent: '#f472b6',
+                background: '#0a0a0a',
+                card: '#1a1a1a'
+            }
+        },
+        medieval: {
+            id: 'medieval',
+            name: 'Reino Antigo',
+            description: 'Pedra, madeira e disciplina ancestral.',
+            price: 2000,
+            previewColor: '#92400e',
+            colors: {
+                primary: '#92400e',
+                secondary: '#1c1917',
+                accent: '#15803d',
+                background: '#0c0a09',
+                card: '#1c stone-900'
+            }
+        },
+        zen: {
+            id: 'zen',
+            name: 'Equilíbrio Zen',
+            description: 'Paz, clareza e minimalismo.',
+            price: 1000,
+            previewColor: '#059669',
+            colors: {
+                primary: '#059669',
+                secondary: '#f8fafc',
+                accent: '#8b5cf6',
+                background: '#ffffff',
+                card: '#f1f5f9'
+            }
+        },
+        void: {
+            id: 'void',
+            name: 'O Vazio',
+            description: 'Onde o tempo e a procrastinação desaparecem.',
+            price: 5000,
+            previewColor: '#7c3aed',
+            colors: {
+                primary: '#7c3aed',
+                secondary: '#000000',
+                accent: '#ffffff',
+                background: '#000000',
+                card: '#090909'
+            }
+        }
+    };
 
-export const themeService = {
-    availableThemes: [
-        { id: THEMES.DEFAULT, name: 'Padrão (Dark)', description: 'O visual clássico do sistema.', price: 0, previewColor: '#0f172a' },
-        { id: THEMES.CYBERPUNK, name: 'Cyberpunk', description: 'Neon, glitches e alta tecnologia.', price: 1000, previewColor: '#f472b6' }, // Pink neon
-        { id: THEMES.MEDIEVAL, name: 'Medieval', description: 'Pergaminhos, madeira e tons terrosos.', price: 800, previewColor: '#78350f' }, // Brown
-        { id: THEMES.MINIMALIST, name: 'Minimalista', description: 'Branco, preto e foco total.', price: 500, previewColor: '#e2e8f0' }, // White
-    ],
+    public availableThemes: Theme[] = Object.values(this.THEMES);
 
-    getCurrentTheme: () => {
-        return localStorage.getItem(STORAGE_KEY_THEME) || THEMES.DEFAULT;
-    },
+    public getCurrentTheme(): ThemeType {
+        const char = JSON.parse(localStorage.getItem('levelup_character') || '{}');
+        return char.current_theme || 'default';
+    }
 
-    getOwnedThemes: () => {
-        const stored = localStorage.getItem(STORAGE_KEY_OWNED);
-        const owned = stored ? JSON.parse(stored) : [THEMES.DEFAULT];
-        return owned;
-    },
+    public getOwnedThemes(): ThemeType[] {
+        const char = JSON.parse(localStorage.getItem('levelup_character') || '{}');
+        return char.owned_themes || ['default'];
+    }
 
-    setTheme: (themeId: string) => {
-        localStorage.setItem(STORAGE_KEY_THEME, themeId);
-        // Apply to document
-        document.documentElement.className = themeId; // This presumes we use classes for themes
-        // If not using classes yet, we might need to rely on CSS variables injected here
-        // For now, let's assume we will toggle classes on <html> or use a Context
+    public async setTheme(themeId: ThemeType) {
+        const char = JSON.parse(localStorage.getItem('levelup_character') || '{}');
+        char.current_theme = themeId;
+        localStorage.setItem('levelup_character', JSON.stringify(char));
+
+        this.applyToDOM(themeId);
+        window.dispatchEvent(new Event('levelup_data_update'));
         window.dispatchEvent(new Event('levelup_theme_change'));
-    },
+    }
 
-    buyTheme: (themeId: string) => {
-        const owned = themeService.getOwnedThemes();
+    public async buyTheme(themeId: ThemeType) {
+        const char = JSON.parse(localStorage.getItem('levelup_character') || '{}');
+        const owned = char.owned_themes || ['default'];
         if (!owned.includes(themeId)) {
-            owned.push(themeId);
-            localStorage.setItem(STORAGE_KEY_OWNED, JSON.stringify(owned));
+            char.owned_themes = [...owned, themeId];
+            localStorage.setItem('levelup_character', JSON.stringify(char));
         }
     }
-};
+
+    public applyToDOM(themeType?: ThemeType) {
+        const active = themeType || this.getCurrentTheme();
+        const theme = this.THEMES[active] || this.THEMES.default;
+        const root = document.documentElement;
+
+        root.style.setProperty('--primary', theme.colors.primary);
+        root.style.setProperty('--background', theme.colors.background);
+        root.style.setProperty('--card', theme.colors.card);
+
+        // For Light themes, we might need a text-color flip
+        if (active === 'zen') {
+            root.style.setProperty('--foreground', '#0f172a');
+            root.classList.add('light');
+        } else {
+            root.style.setProperty('--foreground', '#ffffff');
+            root.classList.remove('light');
+        }
+    }
+}
+
+export const themeService = new ThemeService();

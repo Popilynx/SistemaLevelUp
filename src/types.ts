@@ -16,12 +16,19 @@ export interface Character {
   gold: number;
   hit_points: number;
   created_date: string;
+  category_xp?: Record<string, number>; // XP per category (Study, Health, etc.)
+  rank?: string; // e.g., "Bronze", "Silver", "Gold"
   difficulty?: number;
   reset_count?: number;
   last_reset_date?: string;
   inventory?: MarketItem[];
   active_debuffs?: Debuff[];
   active_buffs?: Buff[];
+  active_pet?: Pet;
+  pet_inventory?: Pet[];
+  discipline_fragments?: number;
+  owned_themes?: string[];
+  current_theme?: string;
 }
 
 export interface Buff {
@@ -74,6 +81,7 @@ export interface Skill {
   id: string;
   name: string;
   category: string;
+  element: Element;
   current_exp: number;
   level: number;
   level_1_exp?: number;
@@ -105,8 +113,12 @@ export interface MarketItem {
   category: string;
   times_purchased: number;
   created_date: string;
+  slot?: 'head' | 'body' | 'legs' | 'feet' | 'main_hand' | 'off_hand' | 'ring' | 'neck';
   health_gain?: number;
+  damage?: number;
+  crit_chance?: number;
   bonus_exp?: number;
+  exp_category?: string;
   bonus_gold?: number;
   bonus_health?: number;
   reduction_penalty?: number;
@@ -135,14 +147,64 @@ export interface DailyCheck {
   timestamp: string;
 }
 
+export type Element = 'fire' | 'water' | 'earth' | 'air' | 'neutral';
+
 export interface DailyBoss {
   id: string;
   name: string;
   image: string;
-  health: number;
-  max_health: number;
+  element: Element;
+  level: number;
+  stats: {
+    health: number;
+    max_health: number;
+    attack: number;
+    defense: number;
+  };
+  rewards: {
+    gold: number;
+    exp: number;
+    items?: string[];
+  };
   status: 'alive' | 'defeated';
-  last_update: string;
-  base_gold_reward: number;
-  base_exp_reward: number;
+  reward_claimed?: boolean;
+  last_update?: string;
+}
+
+export type Boss = DailyBoss;
+
+export interface LoreChapter {
+  id: string;
+  level_required: number;
+  title: string;
+  content: string;
+  unlocked: boolean;
+}
+
+export interface EmergencyQuest {
+  id: string;
+  title: string;
+  description: string;
+  target_value: number;
+  current_value: number;
+  reward_exp: number;
+  reward_gold: number;
+  deadline: string; // ISO string
+  type: 'habit_streak' | 'gold_earn' | 'boss_dmg';
+}
+
+export interface Pet {
+  id: string;
+  name: string;
+  type: 'dragon' | 'owl' | 'slime' | 'wolf' | 'cat';
+  element: Element;
+  level: number;
+  current_exp: number;
+  max_exp: number;
+  evolution_stage: 1 | 2 | 3;
+  icon: string;
+  bonus_type: 'exp_boost' | 'gold_boost' | 'damage_boost' | 'cooldown_reduction';
+  bonus_value: number; // e.g., 0.05 for 5%
+  hunger: number; // 0-100
+  last_fed?: string;
 }

@@ -15,11 +15,12 @@ export default function GoodHabitCard({ habit, isCompleted, onComplete }: GoodHa
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
+      whileHover={{ scale: isCompleted ? 1 : 1.01, y: isCompleted ? 0 : -2 }}
       className={cn(
-        "relative overflow-hidden rounded-xl border p-4 transition-all duration-300",
+        "relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 cursor-pointer group backdrop-blur-md",
         isCompleted
-          ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30"
-          : "bg-slate-800/50 border-slate-700/50 hover:border-cyan-500/30"
+          ? "bg-green-500/10 border-green-500/20"
+          : "bg-slate-900/40 border-slate-800/50 hover:border-cyan-500/40 shadow-lg hover:shadow-cyan-500/10"
       )}
     >
       <div className="flex items-center justify-between">
@@ -36,6 +37,7 @@ export default function GoodHabitCard({ habit, isCompleted, onComplete }: GoodHa
               isCompleted ? "text-green-400 line-through" : "text-white"
             )}>
               {habit.name}
+              {isCompleted && <span className="text-[8px] ml-2 font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded-full decoration-none inline-block">CONCLUÍDO!</span>}
             </h3>
             <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
               <span className="flex items-center gap-1">

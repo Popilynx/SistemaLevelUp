@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { petService } from '@/services/petService';
 import { ArrowLeft, Sword, Shield, Skull, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -10,6 +11,7 @@ import { questService } from '@/services/questService';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
+import { juiceService } from '@/services/juiceService';
 
 export default function BossArena() {
     const [boss, setBoss] = useState<any>(null);
@@ -30,6 +32,14 @@ export default function BossArena() {
         if (currentBoss?.status === 'defeated') {
             setShowVictory(true);
         }
+
+        // Security Check: Redirect if reward claimed
+        if (currentBoss?.reward_claimed) {
+            toast.info("Você já concluiu este desafio por hoje!");
+            window.location.href = createPageUrl('Home');
+            return;
+        }
+
         setLoading(false);
     };
 
@@ -46,31 +56,68 @@ export default function BossArena() {
 
     // --- COMBAT LOGIC ---
 
-    const handlePlayerAttack = async () => {
+    const handlePlayerAttack = async (skillType: 'quick' | 'heavy' | 'focus' = 'quick') => {
         if (!boss || boss.status === 'defeated' || turn !== 'player') return;
 
-        setIsAttacking(true); // Trigger Player Attack Animation (Sword Shake?)
+        setIsAttacking(true);
+        juiceService.play('click');
 
         const stats = characterService.calculateStats(character);
-        const baseDamage = 25;
-        const totalDamage = baseDamage + stats.damage;
+        let baseDamage = 25;
+        let multiplier = 1;
+        let skipTurn = false;
+        let heal = 0;
 
+        if (skillType === 'heavy') {
+            multiplier = 2.5;
+            skipTurn = true;
+            juiceService.play('bossHit');
+        } else if (skillType === 'focus') {
+            multiplier = 0.5;
+            heal = 50;
+            juiceService.play('success');
+        } else {
+            juiceService.play('click');
+        }
+
+        const totalDamage = Math.floor((baseDamage + stats.damage) * multiplier);
+
+        const playerElement = character?.active_pet?.element || 'neutral';
         // Visual Feedback Delay
-        setTimeout(() => {
-            const result = combatService.dealDamage(totalDamage);
+        setTimeout(async () => {
+            const result = combatService.dealDamage(totalDamage, playerElement);
             setBoss(result.boss);
 
+            if (result.multiplier > 1) {
+                toast.success(`CRÍTICO ELEMENTAL! (${playerElement.toUpperCase()} vs ${boss.element.toUpperCase()})`, { icon: '🔥' });
+            } else if (result.multiplier < 1) {
+                toast.error(`ATAQUE FRACO! ${boss.element.toUpperCase()} é resistente a ${playerElement.toUpperCase()}`);
+            }
+
+            if (heal > 0) {
+                const newHealth = Math.min(character.max_health, (character.health || 0) + heal);
+                await characterService.updateCharacter({ health: newHealth });
+                setCharacter(prev => ({ ...prev, health: newHealth }));
+                toast.success(`Você focou e recuperou ${heal} de HP!`);
+            }
+
             questService.updateProgress('boss_damage', result.damageDealt);
-            toast.success(`Você causou ${result.damageDealt} de dano!`);
+            juiceService.vibrate(50);
+
+            if (result.damageDealt > 0) {
+                juiceService.flashScreen();
+            }
 
             if (result.isKill) {
                 setShowVictory(true);
+                juiceService.play('levelUp');
                 setIsAttacking(false);
             } else {
-                // End Player Turn -> Start Enemy Turn
                 setTurn('enemy');
                 setIsAttacking(false);
-                setTimeout(handleEnemyTurn, 1000); // 1s delay before Boss responds
+                const enemyDelay = skipTurn ? 2000 : 1000;
+                if (skipTurn) toast.info("Golpe Pesado! Você precisa de tempo para se recuperar...");
+                setTimeout(handleEnemyTurn, enemyDelay);
             }
         }, 400);
     };
@@ -165,6 +212,23 @@ export default function BossArena() {
                 <div className="absolute bottom-0 w-full bg-linear-to-t from-black via-black/90 to-transparent p-8 text-center">
                     <h2 className="text-3xl md:text-5xl font-black text-white mb-2 truncate px-4 tracking-tight drop-shadow-lg">{boss.name}</h2>
 
+                    {boss.element && boss.element !== 'neutral' && (
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <span className={cn(
+                                "text-sm font-black px-3 py-1 rounded-full uppercase tracking-tighter shadow-lg",
+                                boss.element === 'fire' && "bg-orange-500 text-white",
+                                boss.element === 'water' && "bg-blue-500 text-white",
+                                boss.element === 'earth' && "bg-emerald-500 text-white",
+                                boss.element === 'air' && "bg-cyan-500 text-white",
+                            )}>
+                                {boss.element === 'fire' && '🔥 ELEMENTO: FOGO'}
+                                {boss.element === 'water' && '💧 ELEMENTO: ÁGUA'}
+                                {boss.element === 'earth' && '🌿 ELEMENTO: TERRA'}
+                                {boss.element === 'air' && '🌪️ ELEMENTO: AR'}
+                            </span>
+                        </div>
+                    )}
+
                     {/* Boss HP Bar */}
                     <div className="w-full max-w-2xl mx-auto h-8 bg-slate-900 rounded-full overflow-hidden border border-slate-700 relative shadow-inner">
                         <motion.div
@@ -203,22 +267,72 @@ export default function BossArena() {
                         <div className="flex items-center gap-1"><Sword className="w-4 h-4 text-orange-400" /> Dano: {25 + (characterService.calculateStats(character).damage || 0)}</div>
                         <div className="flex items-center gap-1"><Shield className="w-4 h-4 text-blue-400" /> Def: {characterService.calculateStats(character).defense || 0}</div>
                     </div>
+
+                    {character?.active_pet && (
+                        <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">{character.active_pet.icon}</span>
+                                <div className="text-[10px] leading-tight font-bold text-slate-300 uppercase">
+                                    Ataque Elemental:
+                                    <span className={cn(
+                                        "block text-xs",
+                                        character.active_pet.element === 'fire' && "text-orange-400",
+                                        character.active_pet.element === 'water' && "text-blue-400",
+                                        character.active_pet.element === 'earth' && "text-emerald-400",
+                                        character.active_pet.element === 'air' && "text-cyan-400",
+                                    )}>
+                                        {character.active_pet.element.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-800 px-2 py-1 rounded text-[9px] font-black text-slate-400 uppercase">
+                                {petService.getPetBonus(character.active_pet, 'damage_boost') > 0 ? `+${Math.round(petService.getPetBonus(character.active_pet, 'damage_boost') * 100)}% Dano` : "Bônus Ativo"}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-center md:justify-end">
+                <div className="flex flex-col gap-3">
                     <Button
-                        onClick={handlePlayerAttack}
+                        onClick={() => handlePlayerAttack('quick')}
                         disabled={boss.status === 'defeated' || turn !== 'player'}
                         className={cn(
-                            "font-black py-8 px-12 text-2xl rounded-2xl shadow-[0_10px_0_rgba(0,0,0,0.5)] border-t transition-all flex items-center gap-4 uppercase tracking-widest w-full",
+                            "font-black py-6 px-8 text-xl rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest",
                             turn === 'player'
-                                ? "bg-red-700 hover:bg-red-600 text-white shadow-[0_10px_0_rgb(153,27,27)] border-red-500 active:translate-y-2 active:shadow-none"
-                                : "bg-slate-700 text-slate-500 border-slate-600 cursor-not-allowed"
+                                ? "bg-red-700 hover:bg-red-600 text-white shadow-[0_5px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none"
+                                : "bg-slate-700 text-slate-500 cursor-not-allowed"
                         )}
                     >
-                        {turn === 'player' ? <><Sword className="w-8 h-8" /> ATACAR</> : "AGUARDE..."}
+                        <Sword className="w-6 h-6" /> Ataque Rápido
                     </Button>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button
+                            onClick={() => handlePlayerAttack('heavy')}
+                            disabled={boss.status === 'defeated' || turn !== 'player'}
+                            className={cn(
+                                "font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase",
+                                turn === 'player'
+                                    ? "bg-orange-700 hover:bg-orange-600 text-white shadow-[0_4px_0_rgb(194,65,12)] active:translate-y-1 active:shadow-none"
+                                    : "bg-slate-800 text-slate-600 cursor-not-allowed"
+                            )}
+                        >
+                            <Skull className="w-4 h-4" /> Golpe Pesado
+                        </Button>
+                        <Button
+                            onClick={() => handlePlayerAttack('focus')}
+                            disabled={boss.status === 'defeated' || turn !== 'player'}
+                            className={cn(
+                                "font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase",
+                                turn === 'player'
+                                    ? "bg-blue-700 hover:bg-blue-600 text-white shadow-[0_4px_0_rgb(29,78,216)] active:translate-y-1 active:shadow-none"
+                                    : "bg-slate-800 text-slate-600 cursor-not-allowed"
+                            )}
+                        >
+                            <Shield className="w-4 h-4" /> Foco/Cura
+                        </Button>
+                    </div>
                 </div>
             </div>
 

@@ -15,18 +15,19 @@ export default function ObjectiveCard({ objective, onUpdateProgress, onComplete 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.01, y: -2 }}
       className={cn(
-        "relative overflow-hidden rounded-xl border p-5 transition-all",
+        "relative overflow-hidden rounded-[2rem] border p-6 transition-all backdrop-blur-xl shadow-xl",
         objective.is_main
-          ? "bg-gradient-to-br from-cyan-500/10 via-slate-800 to-blue-500/10 border-cyan-500/30"
+          ? "bg-slate-900/60 border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.05)]"
           : isCompleted
-            ? "bg-green-500/5 border-green-500/30"
-            : "bg-slate-800/50 border-slate-700/50 hover:border-cyan-500/20"
+            ? "bg-green-500/[0.03] border-green-500/20"
+            : "bg-slate-900/40 border-slate-800/60 hover:border-cyan-500/30"
       )}
     >
       {objective.is_main && (
-        <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
-          PRINCIPAL
+        <div className="absolute top-0 right-0 bg-gradient-to-r from-cyan-600 to-blue-600 text-[10px] font-black tracking-widest px-4 py-1.5 rounded-bl-2xl uppercase shadow-lg">
+          Prioridade Máxima
         </div>
       )}
 

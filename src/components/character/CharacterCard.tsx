@@ -38,8 +38,15 @@ export default function CharacterCard({ character }: CharacterCardProps) {
                 )}
               </div>
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full px-2 py-0.5 text-xs font-bold text-white">
-              LV {character?.level || 1}
+            <div className="absolute -bottom-1 -right-1 flex flex-col items-end gap-1">
+              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full px-2 py-0.5 text-[8px] font-bold text-white shadow-lg">
+                LV {character?.level || 1}
+              </div>
+              {character?.rank && (
+                <div className="bg-slate-900/90 border border-cyan-500/30 rounded-full px-2 py-0.5 text-[8px] font-black text-cyan-300 shadow-xl whitespace-nowrap">
+                  {character.rank}
+                </div>
+              )}
             </div>
           </div>
 
@@ -112,6 +119,21 @@ export default function CharacterCard({ character }: CharacterCardProps) {
             <p className="text-[10px] text-slate-500 uppercase font-black">HP Stats</p>
           </div>
         </div>
+
+        {/* Category XP Insights */}
+        {character?.category_xp && Object.keys(character.category_xp).length > 0 && (
+          <div className="mt-6 pt-4 border-t border-slate-700/50">
+            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-2">Domínio por Área</p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(character.category_xp).map(([cat, xp]: [string, any]) => (
+                <div key={cat} className="bg-slate-800/50 rounded-lg p-2 border border-slate-700/30 flex justify-between items-center text-[10px]">
+                  <span className="capitalize text-slate-400">{cat}</span>
+                  <span className="font-bold text-cyan-400">{xp} XP</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Status Effects (Buffs & Debuffs) */}
         {(activeBuffs.length > 0 || activeDebuffs.length > 0) && (

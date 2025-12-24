@@ -1,15 +1,16 @@
-import { Boss } from '../types/gameTypes';
+import { Boss, Element } from '@/types';
 import { characterService } from './characterService';
+import { petService } from './petService';
 
 const STORAGE_KEY = 'levelup_daily_boss';
 
 // Predefined Bosses
 const BOSS_TEMPLATE = [
-    { name: "Dragão da Procrastinação", image: "🐲", base_hp: 500, attack: 15, defense: 5, gold: 150, exp: 200 },
-    { name: "Gigante do Desânimo", image: "👹", base_hp: 400, attack: 12, defense: 3, gold: 120, exp: 180 },
-    { name: "Sombra da Preguiça", image: "👻", base_hp: 300, attack: 10, defense: 2, gold: 100, exp: 150 },
-    { name: "Gólem da Inércia", image: "🗿", base_hp: 600, attack: 20, defense: 10, gold: 250, exp: 300 },
-    { name: "Feiticeiro do Caos", image: "🧙‍♂️", base_hp: 350, attack: 25, defense: 1, gold: 200, exp: 250 },
+    { name: "Dragão da Procrastinação", image: "🐲", element: 'fire' as Element, base_hp: 500, attack: 15, defense: 5, gold: 150, exp: 200 },
+    { name: "Gigante do Desânimo", image: "👹", element: 'earth' as Element, base_hp: 400, attack: 12, defense: 3, gold: 120, exp: 180 },
+    { name: "Sombra da Preguiça", image: "👻", element: 'air' as Element, base_hp: 300, attack: 10, defense: 2, gold: 100, exp: 150 },
+    { name: "Gólem da Inércia", image: "🗿", element: 'earth' as Element, base_hp: 600, attack: 20, defense: 10, gold: 250, exp: 300 },
+    { name: "Feiticeiro do Caos", image: "🧙‍♂️", element: 'water' as Element, base_hp: 350, attack: 25, defense: 1, gold: 200, exp: 250 },
 ];
 
 const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -29,6 +30,7 @@ export const combatService = {
                 id: generateId(),
                 name: template.name,
                 image: template.image,
+                element: template.element || 'neutral',
                 level: 1,
                 stats: {
                     health: template.base_hp,
@@ -67,12 +69,31 @@ export const combatService = {
         window.dispatchEvent(new Event('levelup_data_update')); // Sync with Home
     },
 
-    dealDamage: (amount: number): { boss: Boss, damageDealt: number, isKill: boolean } => {
+    getElementalMultiplier: (attacker: Element, defender: Element): number => {
+        if (attacker === 'neutral' || defender === 'neutral') return 1.0;
+
+        // fire > air > earth > water > fire
+        const advantages: Record<Element, Element> = {
+            fire: 'air',
+            air: 'earth',
+            earth: 'water',
+            water: 'fire',
+            neutral: 'neutral'
+        };
+
+        if (advantages[attacker] === defender) return 1.5; // Strong
+        if (advantages[defender] === attacker) return 0.7; // Weak
+        return 1.0;
+    },
+
+    dealDamage: (amount: number, playerElement: Element = 'neutral'): { boss: Boss, damageDealt: number, isKill: boolean, multiplier: number } => {
         const boss = combatService.getDailyBoss();
-        if (boss.status === 'defeated') return { boss, damageDealt: 0, isKill: false };
+        if (boss.status === 'defeated') return { boss, damageDealt: 0, isKill: false, multiplier: 1 };
+
+        const multiplier = combatService.getElementalMultiplier(playerElement, boss.element || 'neutral');
 
         // Defense Calculation
-        const damageDealt = Math.max(1, amount - boss.stats.defense);
+        const damageDealt = Math.max(1, Math.floor((amount * multiplier) - (boss.stats?.defense || 0)));
         const newHealth = Math.max(0, boss.stats.health - damageDealt);
 
         boss.stats.health = newHealth;
@@ -84,7 +105,7 @@ export const combatService = {
         }
 
         combatService.saveBoss(boss);
-        return { boss, damageDealt, isKill };
+        return { boss, damageDealt, isKill, multiplier };
     },
 
     // New: Calculate generic Boss Damage against Player

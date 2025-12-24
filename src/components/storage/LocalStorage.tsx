@@ -1,5 +1,6 @@
 import { format, subDays, parseISO } from 'date-fns';
 import { characterService } from '../../services/characterService';
+import { Element } from '@/types';
 
 const STORAGE_KEYS = {
   CHARACTER: 'levelup_character',
@@ -15,11 +16,11 @@ const STORAGE_KEYS = {
 };
 
 const POTENTIAL_BOSSES = [
-  { name: "Dragão da Procrastinação", image: "🐲", max_health: 1200, reward_gold: 150, reward_exp: 200 },
-  { name: "Gigante do Desânimo", image: "👹", max_health: 1000, reward_gold: 120, reward_exp: 180 },
-  { name: "Sombra da Preguiça", image: "👻", max_health: 800, reward_gold: 100, reward_exp: 150 },
-  { name: "Mestre da Distração", image: "🧙‍♂️", max_health: 1100, reward_gold: 200, reward_exp: 250 },
-  { name: "Gólem da Inércia", image: "🗿", max_health: 1500, reward_gold: 250, reward_exp: 300 },
+  { name: "Dragão da Procrastinação", image: "🐲", element: 'fire' as any, max_health: 1200, reward_gold: 150, reward_exp: 200 },
+  { name: "Gigante do Desânimo", image: "👹", element: 'earth' as any, max_health: 1000, reward_gold: 120, reward_exp: 180 },
+  { name: "Sombra da Preguiça", image: "👻", element: 'air' as any, max_health: 800, reward_gold: 100, reward_exp: 150 },
+  { name: "Mestre da Distração", image: "🧙‍♂️", element: 'water' as any, max_health: 1100, reward_gold: 200, reward_exp: 250 },
+  { name: "Gólem da Inércia", image: "🗿", element: 'earth' as any, max_health: 1500, reward_gold: 250, reward_exp: 300 },
 ];
 
 const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -105,12 +106,12 @@ export const initializeDefaultData = () => {
         { id: generateId(), name: "Fumar", icon: "🚬", health_penalty: 150, exp_penalty: 75, color: "purple", days_clean: 0, total_falls: 0, monthly_falls: 0, created_date: new Date().toISOString() },
       ],
       skills: [
-        { id: generateId(), name: "Estudo ERP e Programação", category: "estudo", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Leitura", category: "leitura", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Saúde", category: "saude", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Lazer", category: "lazer", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
-        { id: generateId(), name: "Musculação", category: "musculacao", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, linked_objective: "Entrar em forma", created_date: new Date().toISOString() },
-        { id: generateId(), name: "Finanças", category: "financas", current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Estudo ERP e Programação", category: "estudo", element: 'air', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Leitura", category: "leitura", element: 'water', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Saúde", category: "saude", element: 'earth', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Lazer", category: "lazer", element: 'neutral', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
+        { id: generateId(), name: "Musculação", category: "musculacao", element: 'fire', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, linked_objective: "Entrar em forma", created_date: new Date().toISOString() },
+        { id: generateId(), name: "Finanças", category: "financas", element: 'earth', current_exp: 0, level: 1, level_1_exp: 500, level_2_exp: 1200, level_3_exp: 2400, level_4_exp: 5000, level_5_exp: 9000, created_date: new Date().toISOString() },
       ],
       objectives: [
         { id: generateId(), title: "Ser uma pessoa melhor a cada dia", description: "Objetivo principal de vida", is_main: true, progress: 0, status: "em_andamento", exp_reward: 1000, gold_reward: 500, created_date: new Date().toISOString() },
@@ -178,6 +179,40 @@ export const storage = {
   updateCharacter: async (updates: any) => {
     // We use the centralized characterService for leveling logic
     const updated = characterService.updateCharacter(updates);
+
+    // --- SKILL XP UPDATE ---
+    // Extract category and exp_gain passed from Home.tsx
+    if (updates.category && updates.exp_gain) {
+      const skills = await storage.getSkills();
+      const categorySkills = skills.filter((s: any) => s.category === updates.category);
+
+      if (categorySkills.length > 0) {
+        categorySkills.forEach((skill: any) => {
+          skill.current_exp = (skill.current_exp || 0) + updates.exp_gain;
+
+          // Skill Level Up Thresholds (matching SkillCard.tsx logic)
+          const getThreshold = (lvl: number) => {
+            switch (lvl) {
+              case 1: return skill.level_1_exp || 500;
+              case 2: return skill.level_2_exp || 1200;
+              case 3: return skill.level_3_exp || 2400;
+              case 4: return skill.level_4_exp || 5000;
+              case 5: return skill.level_5_exp || 9000;
+              default: return 999999;
+            }
+          };
+
+          while (skill.current_exp >= getThreshold(skill.level) && skill.level < 5) {
+            skill.level++;
+          }
+        });
+        localStorage.setItem(STORAGE_KEYS.SKILLS, JSON.stringify(skills));
+
+        // Notify components (like Skills page) that skills updated
+        window.dispatchEvent(new Event('levelup_data_update'));
+      }
+    }
+
     return updated;
   },
   getInventory: async () => {
@@ -473,6 +508,7 @@ export const storage = {
         id: generateId(),
         name: randomBoss.name,
         image: randomBoss.image,
+        element: randomBoss.element || 'neutral',
         health: randomBoss.max_health,
         max_health: randomBoss.max_health,
         status: 'alive',

@@ -49,6 +49,8 @@ export interface Character {
     inventory?: Item[];
     active_buffs?: Buff[];
     active_debuffs?: any[];
+    category_xp?: Record<string, number>;
+    rank?: string;
     created_date?: string;
     updated_date?: string;
 }

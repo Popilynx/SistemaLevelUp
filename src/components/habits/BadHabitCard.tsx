@@ -24,12 +24,15 @@ export default function BadHabitCard({ habit, onFail }: BadHabitCardProps) {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
+      whileHover={{ scale: 1.01, y: -2 }}
       className={cn(
-        "relative overflow-hidden rounded-xl border p-4 transition-all duration-300",
-        colors.bg,
-        colors.border
+        "relative overflow-hidden rounded-[1.5rem] border p-5 transition-all duration-300 backdrop-blur-md shadow-lg",
+        isClean
+          ? "bg-slate-900/40 border-slate-800/60"
+          : "bg-red-500/[0.05] border-red-500/20"
       )}
     >
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-red-500/[0.02] pointer-events-none" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-lg", colors.bg)}>

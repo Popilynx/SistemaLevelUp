@@ -1,4 +1,5 @@
-import { Character, Item } from '../types/gameTypes';
+import { Character, MarketItem, Pet } from '@/types';
+import { petService } from './petService';
 
 const STORAGE_KEY = 'levelup_character';
 
@@ -23,11 +24,34 @@ export const characterService = {
         return level * 500;
     },
 
-    updateCharacter: (updates: Partial<Character>): Character | null => {
+    calculateRank: (level: number): string => {
+        if (level <= 10) return "🟤 Bronze";
+        if (level <= 20) return "⚪ Prata";
+        if (level <= 40) return "🟡 Ouro";
+        if (level <= 70) return "💎 Platina";
+        return "🌌 Diamante";
+    },
+
+    updateCharacter: (updates: Partial<Character> & { category?: string, exp_gain?: number }): Character | null => {
         const current = characterService.getCharacter();
         if (!current) return null;
 
-        let updated = { ...current, ...updates };
+        let { category, exp_gain, ...rest } = updates;
+        let updated = { ...current, ...rest };
+
+        // --- CATEGORY XP TRACKING ---
+        if (category && exp_gain) {
+            if (!updated.category_xp) updated.category_xp = {};
+            updated.category_xp[category] = (updated.category_xp[category] || 0) + exp_gain;
+            updated.current_exp = (updated.current_exp || 0) + exp_gain;
+            updated.total_exp = (updated.total_exp || 0) + exp_gain;
+
+            // --- PET EXP ---
+            if (updated.active_pet) {
+                const petXpGain = petService.calculatePetXpGain(exp_gain);
+                updated.active_pet = petService.updatePetXp(updated.active_pet, petXpGain);
+            }
+        }
 
         // --- RECURSIVE LEVELING LOGIC ---
         // If current_exp exceeds or equals requirement, level up and carry over remainder.
@@ -41,9 +65,17 @@ export const characterService = {
         }
 
         if (levelUps > 0) {
-            // Optional: You could add logic here to increase max_health per level?
-            // updated.max_health += levelUps * 50; 
-            // updated.health = updated.max_health;
+            // DISPATCH LEVEL UP EVENT
+            window.dispatchEvent(new CustomEvent('levelup_event', {
+                detail: { levels: levelUps, newLevel: updated.level }
+            }));
+
+            // Increase HP per level
+            updated.max_health = (updated.max_health || 1000) + (levelUps * 100);
+            updated.health = updated.max_health;
+
+            // Update Rank
+            updated.rank = characterService.calculateRank(updated.level);
         }
 
         characterService.saveCharacter(updated);
@@ -86,7 +118,7 @@ export const characterService = {
             bonus_gold: 0,
         };
 
-        const equipped = (character.inventory || []).filter(i => i.is_equipped);
+        const equipped = (character.inventory || []).filter((i: any) => i.is_equipped) as MarketItem[];
         equipped.forEach(item => {
             if (item.damage) stats.damage += item.damage;
             if (item.bonus_exp) stats.bonus_exp += item.bonus_exp;
