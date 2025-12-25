@@ -28,7 +28,7 @@ export default function PetSelection({ onSelect }: PetSelectionProps) {
             <h2 className="text-2xl font-bold text-white mb-2">Escolha seu Companheiro</h2>
             <p className="text-slate-400 mb-6 text-sm">Um pet seguirá sua jornada e fornecerá bônus únicos conforme evolui.</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {PET_OPTIONS.map((opt) => (
                     <motion.div
                         key={opt.type}

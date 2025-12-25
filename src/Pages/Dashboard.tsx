@@ -11,18 +11,21 @@ export default function Dashboard() {
     const [character, setCharacter] = useState<any>(null);
     const [activities, setActivities] = useState<any[]>([]);
     const [habits, setHabits] = useState<any[]>([]);
+    const [skills, setSkills] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
-            const [char, logs, gHabits] = await Promise.all([
+            const [char, logs, gHabits, skillsData] = await Promise.all([
                 storage.getCharacter(),
                 storage.getActivityLogs(),
                 storage.getGoodHabits(),
+                storage.getSkills(),
             ]);
             setCharacter(char);
             setActivities(logs);
             setHabits(gHabits);
+            setSkills(skillsData);
             setLoading(false);
         };
         loadData();
@@ -30,13 +33,28 @@ export default function Dashboard() {
 
     if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-cyan-400">Analizando dados da jornada...</div>;
 
-    // Prepare Radar Data from Category XP
-    const categories = ['estudo', 'saude', 'financas', 'trabalho', 'social', 'mental'];
-    const radarData = categories.map(cat => ({
-        label: cat,
-        value: character?.category_xp?.[cat] || 0,
-        max: Math.max(...Object.values(character?.category_xp || { dummy: 100 }) as number[], 100)
-    }));
+    // Prepare Radar Data from Skills instead of category_xp
+    const categoryLabels: Record<string, string> = {
+        estudo: '💻 Estudo',
+        leitura: '📖 Leitura',
+        saude: '💪 Saúde',
+        lazer: '🎮 Lazer',
+        musculacao: '🏋️ Musculação',
+        financas: '💰 Finanças',
+    };
+
+    const radarData = Object.keys(categoryLabels).map(cat => {
+        const categorySkills = skills.filter(s => s.category === cat);
+        const avgLevel = categorySkills.length > 0
+            ? categorySkills.reduce((sum, s) => sum + (s.level || 1), 0) / categorySkills.length
+            : 0;
+
+        return {
+            label: categoryLabels[cat].split(' ').pop() || cat,
+            value: avgLevel,
+            max: 5
+        };
+    });
 
     // Calculate Stats
     const totalExp = character?.total_exp || 0;

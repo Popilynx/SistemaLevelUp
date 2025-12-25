@@ -12,6 +12,7 @@ export const createPageUrl = (page: string): string => {
     'Dashboard': '/dashboard',
     'Quests': '/quests',
     'Forge': '/forge',
+    'BossArena': '/boss-arena',
   };
 
   return pageMap[page] || '/';

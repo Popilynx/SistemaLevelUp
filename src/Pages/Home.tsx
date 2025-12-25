@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Target, Swords, BookOpen, Scroll, Settings, ShoppingBag, Activity, Package, TrendingUp, Hammer, CheckCircle } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { storage } from '@/components/storage/LocalStorage';
 import { combatService } from '@/services/combatService';
@@ -40,6 +40,7 @@ export default function Home() {
   const [showLevelUp, setShowLevelUp] = useState<{ levels: number, level: number } | null>(null);
   const [isLoreOpen, setIsLoreOpen] = useState(false);
   const [isPetOpen, setIsPetOpen] = useState(false);
+  const navigate = useNavigate();
 
   const loadData = async () => {
     const [char, gHabits, bHabits, obj, checks, boss] = await Promise.all([
@@ -495,9 +496,9 @@ export default function Home() {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative w-full max-w-2xl bg-[#020617] border border-slate-800/80 rounded-[3rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                        className="relative w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-[2rem] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4"
                       >
-                        <div className="relative p-0 overflow-y-auto custom-scrollbar flex-1">
+                        <div className="relative p-0 overflow-y-auto custom-scrollbar flex-1 pb-8">
                           <Button
                             variant="ghost"
                             onClick={() => setIsPetOpen(false)}
@@ -523,7 +524,7 @@ export default function Home() {
               if (dailyBoss?.reward_claimed) {
                 toast.error("Arena selada! Você já coletou as recompensas de hoje.");
               } else {
-                window.location.href = createPageUrl('BossArena');
+                navigate(createPageUrl('BossArena'));
               }
             }}
             className="transform transition-all hover:scale-[1.02] cursor-pointer h-full active:scale-[0.98]"
@@ -536,7 +537,7 @@ export default function Home() {
       {/* Evolution Dashboard: Dynamic Sections */}
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
         {/* Navigation Grid 2.0: Floating Glass Icons */}
-        <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3 relative z-30">
           {navItems.map((item, idx) => (
             <motion.div
               key={item.page}
@@ -545,18 +546,18 @@ export default function Home() {
               transition={{ delay: idx * 0.05 }}
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
-              className="group relative flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md border border-slate-800/50 p-4 rounded-2xl hover:border-cyan-500/30 transition-all aspect-square text-center shadow-lg overflow-hidden"
+              className="group relative flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md border border-slate-800/50 p-3 sm:p-4 rounded-2xl hover:border-cyan-500/30 transition-all min-h-[100px] sm:aspect-square text-center shadow-lg overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               {item.page === 'BossArena' ? (
                 <Button
                   onClick={(e) => {
+                    e.preventDefault();
                     const boss = combatService.getDailyBoss();
                     if (boss.reward_claimed) {
-                      e.preventDefault();
                       toast.error("Você já coletou a recompensa de hoje! Volte amanhã.");
                     } else {
-                      window.location.href = createPageUrl(item.page);
+                      navigate(createPageUrl(item.page));
                     }
                   }}
                   variant="ghost"

@@ -485,7 +485,11 @@ export const storage = {
   getActivityLogs: async () => {
     const data = localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOG);
     const logs = data ? JSON.parse(data) : [];
-    return logs.sort((a: any, b: any) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+    return logs.sort((a: any, b: any) => {
+      const timeA = new Date(a.timestamp || a.created_date || 0).getTime();
+      const timeB = new Date(b.timestamp || b.created_date || 0).getTime();
+      return timeB - timeA;
+    });
   },
   addActivityLog: async (log: any) => {
     const logs = await storage.getActivityLogs();
