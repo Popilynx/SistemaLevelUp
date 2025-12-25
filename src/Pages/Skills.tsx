@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { storage } from '@/components/storage/LocalStorage';
 import { perkService, Perk } from '@/services/perkService';
-import { Skill, Objective } from '@/types';
+import { Skill, Objective, Element as SkillElement } from '@/types';
 import RadarChart from '@/components/ui/RadarChart';
 import { Lock, Unlock } from 'lucide-react';
 
@@ -24,6 +24,7 @@ export default function Skills() {
   const [newSkill, setNewSkill] = useState({
     name: '',
     category: 'estudo',
+    element: 'neutral' as SkillElement,
     linked_objective: '',
   });
 
@@ -50,13 +51,14 @@ export default function Skills() {
         id: Date.now().toString(),
         name: newSkill.name,
         category: newSkill.category as any,
+        element: newSkill.element,
         current_exp: 0,
         level: 1,
       };
       await storage.createSkill(skill);
       await loadData();
       setIsDialogOpen(false);
-      setNewSkill({ name: '', category: 'estudo', linked_objective: '' });
+      setNewSkill({ name: '', category: 'estudo', element: 'neutral', linked_objective: '' });
     } catch (error) {
       console.error('Error creating skill:', error);
     }
@@ -156,6 +158,20 @@ export default function Skills() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label className="text-slate-300">Elemento</Label>
+                  <Select
+                    value={newSkill.element}
+                    onChange={(e) => setNewSkill({ ...newSkill, element: e.target.value as SkillElement })}
+                  >
+                    <SelectItem value="fire">🔥 Fogo</SelectItem>
+                    <SelectItem value="water">💧 Água</SelectItem>
+                    <SelectItem value="earth">🌿 Terra</SelectItem>
+                    <SelectItem value="air">💨 Ar</SelectItem>
+                    <SelectItem value="neutral">⚖️ Neutro</SelectItem>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-slate-300">Objetivo Vinculado (opcional)</Label>
                   <Select
                     value={newSkill.linked_objective}
@@ -217,8 +233,8 @@ export default function Skills() {
                 <div
                   key={perk.id}
                   className={`relative p-4 rounded-xl border transition-all ${isUnlocked
-                      ? 'bg-slate-900 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
-                      : 'bg-slate-900/50 border-slate-800 opacity-60 grayscale'
+                    ? 'bg-slate-900 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
+                    : 'bg-slate-900/50 border-slate-800 opacity-60 grayscale'
                     }`}
                 >
                   <div className="flex items-start justify-between mb-2">
