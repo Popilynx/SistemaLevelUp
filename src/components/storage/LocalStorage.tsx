@@ -168,8 +168,13 @@ export const initializeDefaultData = () => {
 
 export const storage = {
   getCharacter: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.CHARACTER);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CHARACTER);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.error("Failed to parse character data", e);
+      return null;
+    }
   },
   createCharacter: async (character) => {
     const newCharacter = { ...character, id: generateId(), created_date: new Date().toISOString() };
@@ -311,8 +316,13 @@ export const storage = {
   },
 
   getGoodHabits: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.GOOD_HABITS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.GOOD_HABITS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error("Failed to parse good habits", e);
+      return [];
+    }
   },
   addGoodHabit: async (habit) => {
     const habits = await storage.getGoodHabits();
@@ -337,8 +347,13 @@ export const storage = {
   },
 
   getBadHabits: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.BAD_HABITS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.BAD_HABITS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error("Failed to parse bad habits", e);
+      return [];
+    }
   },
   addBadHabit: async (habit) => {
     const habits = await storage.getBadHabits();
@@ -363,8 +378,13 @@ export const storage = {
   },
 
   getSkills: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.SKILLS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SKILLS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error("Failed to parse skills", e);
+      return [];
+    }
   },
   createSkill: async (skill) => {
     const skills = await storage.getSkills();
@@ -392,8 +412,13 @@ export const storage = {
   },
 
   getObjectives: async () => {
-    const data = localStorage.getItem(STORAGE_KEYS.OBJECTIVES);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.OBJECTIVES);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error("Failed to parse objectives", e);
+      return [];
+    }
   },
   createObjective: async (objective) => {
     const objectives = await storage.getObjectives();

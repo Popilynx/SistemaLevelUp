@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { petService } from '@/services/petService';
 import { ArrowLeft, Sword, Shield, Skull, Trophy } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { storage } from '@/components/storage/LocalStorage'; // Still needed for some global data or fallback
 import { combatService } from '@/services/combatService';
@@ -21,6 +21,7 @@ export default function BossArena() {
     const [isAttacking, setIsAttacking] = useState(false);
     const [showVictory, setShowVictory] = useState(false);
     const [showDefeat, setShowDefeat] = useState(false);
+    const navigate = useNavigate();
 
     // Initial Load & Event Listeners
     const loadData = () => {
@@ -36,7 +37,7 @@ export default function BossArena() {
         // Security Check: Redirect if reward claimed
         if (currentBoss?.reward_claimed) {
             toast.info("Você já concluiu este desafio por hoje!");
-            window.location.href = createPageUrl('Home');
+            navigate(createPageUrl('Home'));
             return;
         }
 
@@ -156,7 +157,7 @@ export default function BossArena() {
             toast.success(`Recompensas Coletadas: +${result.gold} Ouro, +${result.exp} XP!`);
 
             // Return to Home
-            window.location.href = createPageUrl('Home');
+            navigate(createPageUrl('Home'));
         } else {
             toast.error("Você já coletou a recompensa de hoje!");
         }
